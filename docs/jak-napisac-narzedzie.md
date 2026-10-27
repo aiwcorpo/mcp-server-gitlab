@@ -1,20 +1,21 @@
 # Jak napisać narzędzie
 
 Narzędzie to metoda `@Tool` wołana przez model przez gateway. Każdy argument jest niezaufany, a wynik trafia
-do modelu, który może go potraktować jak instrukcję. Wzorcem jest `get_record`.
+do modelu, który może go potraktować jak instrukcję. Wzorcem jest `get_merge_request`.
 
 ## Kroki, od środka
 
 1. `mcp-core`: rekord domeny tylko z polami, które narzędzie ma oddać; wyjątek domeny dla "nie ma albo
-   niewidoczne"; metoda portu wejściowego (`GitlabUseCase`) i wyjściowego (`GitlabResourcePort`).
-2. `mcp-application`: implementacja przypadku użycia w `GitlabService` (bez Springa, test JUnit obok).
+   niewidoczne"; metoda portu wejściowego (`GitLabUseCase`) i wyjściowego (`GitLabPort`).
+2. `mcp-application`: implementacja przypadku użycia w `GitLabService` (bez Springa, test JUnit obok).
 3. `mcp-integration`: wywołanie systemu w adapterze. Poświadczenie zawsze z
    `CredentialContext.require(SYSTEM)` i `credential::applyTo`; dla nagłówka innego niż `Authorization`
    (np. `PRIVATE-TOKEN` GitLaba) `credential.value()`. 404 i 403 systemu -> pusty wynik (jeden kod
    `not_found_or_denied`), 401 -> `CredentialRequiredException(SYSTEM)`. Odpowiedź do prywatnego DTO z
    `@JsonIgnoreProperties(ignoreUnknown = true)`, potem do domeny.
-4. `mcp-tools`: cienka metoda `@Tool` z `@ToolRisk`, walidacją argumentów i wywołaniem przypadku użycia;
-   mapowanie wyjątku domeny na kod C10 w `GitlabToolErrors`.
+4. `mcp-tools`: cienka metoda `@Tool` z `@ToolRisk`, `@ArgumentLimits` na każdym argumencie (tekst bez
+   `maxLength` zatrzymuje start), walidacją w `GitLabArguments` i wywołaniem przypadku użycia;
+   mapowanie wyjątku domeny na kod C10 w `GitLabToolErrors`.
 5. `mcp-app`: dopisanie beana narzędzia w `McpToolsConfiguration` (jawna lista; sam `@Tool` nie wystarczy),
    test w `mcp-app/src/test` przez `ServerTestSupport`, odpowiedź systemu w `StubBackend`.
 6. `docs/api/tools-catalog.md` i tabela narzędzi w README.

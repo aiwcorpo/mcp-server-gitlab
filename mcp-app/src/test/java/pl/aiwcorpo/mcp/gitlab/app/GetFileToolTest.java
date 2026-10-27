@@ -30,7 +30,7 @@ class GetFileToolTest extends ServerTestSupport {
                     .contains("\"project\":\"team-a/app\"")
                     .contains("\"path\":\"docs/guide.md\"", "\"ref\":\"v1.0\"", "\"commitId\":\"" + StubBackend.COMMIT + "\"",
                             "\"kind\":\"untrusted-data\"", "\"origin\":\"gitlab-file-content\"",
-                            "Zażółć gęślą jaźń");
+                            "Za\u017c\u00f3\u0142\u0107 g\u0119\u015bl\u0105 ja\u017a\u0144");
         }
         assertThat(BACKEND.requests()).extracting(seen -> seen.method() + " " + seen.rawPath() + "?" + seen.rawQuery())
                 .containsExactly(

@@ -3,7 +3,7 @@
 ## Miejsce w platformie
 
 ```
-klient AI --OIDC--> MCP gateway --mTLS + JWT C2 + poświadczenie C3--> mcp-gitlab --API--> system gitlab
+klient AI --OIDC--> MCP gateway --mTLS + JWT C2 + poświadczenie C3--> mcp-gitlab --API v4--> GitLab
                        |  ^
                        |  +-- credential broker (poświadczenie użytkownika)
                        +-- polityki (Cedar), potwierdzenia, audyt
@@ -45,3 +45,11 @@ tryb ASYNC.
   programisty.
 - Adapter nie podąża za przekierowaniami i nie czyta treści błędów systemu.
 - Ponawianie i circuit breaker w adapterze: M2 template'u (teraz tylko timeouty).
+- Ścieżki GitLaba rozwiązuje GitLab (`GET /groups/:path`, `GET /projects/:path`), dalej tylko id; wynik
+  pokazuje ścieżkę kanoniczną. Porównanie napisów myliłoby wielkość liter i przeniesione projekty.
+- `get_file`: HEAD przed pobraniem (rozmiar), treść przy commicie z HEAD; plik binarny (NUL albo niepoprawny
+  UTF-8) i za duży nie są zwracane.
+- Walidacja `inputSchema` w MCP SDK wyłączona (`McpSyncServerCustomizer` z `immediateExecution(true)`, który
+  zastępuje domyślny Spring AI); argumenty sprawdzają narzędzia i `StrictArgumentsToolCallback`, więc błędy są
+  w C10 i audytowane.
+- `ProjectResultFilter` to jedno miejsce na `ResultFilter`/`QueryScope` startera beta; teraz przepuszcza listę.
