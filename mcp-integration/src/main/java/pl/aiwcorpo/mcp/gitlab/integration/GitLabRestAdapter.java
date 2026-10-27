@@ -12,7 +12,10 @@ import java.util.function.Supplier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.ssl.SslBundles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -21,7 +24,10 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileMetadata;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FoundMergeRequest;
@@ -48,7 +54,8 @@ import pl.aiwcorpo.mcp.platform.security.CredentialRequiredException;
  * <p>Error mapping matters for security: 404 and 403 both become "not visible" (one client-facing code,
  * {@code not_found_or_denied}), and 401 means the stored credential no longer works, so the user is sent to
  * the portal to reconnect ({@code credential_required}). A failed call becomes an exception with the status
- * alone, so no response body reaches a message or a log line.
+ * alone, an unusable answer (redirect, unparsable or oversized body) a {@link BackendResponseException}, so no
+ * response body reaches a message or a log line.
  */
 @Component
 @EnableConfigurationProperties(GitLabBackendProperties.class)
@@ -56,6 +63,9 @@ public class GitLabRestAdapter implements GitLabPort {
 
     /** System id of this server: {@code server-id} is {@code mcp-<system>}, and the starter refuses any other. */
     static final String SYSTEM = "gitlab";
+
+    private static final String DEV_PROFILE = "dev";
+    private static final Logger LOG = LoggerFactory.getLogger(GitLabRestAdapter.class);
 
     static final int PROJECT_DESCRIPTION_MAX_CHARS = 2_000;
     static final int MERGE_REQUEST_DESCRIPTION_MAX_CHARS = 20_000;
@@ -65,16 +75,24 @@ public class GitLabRestAdapter implements GitLabPort {
 
     private final RestClient client;
 
-    public GitLabRestAdapter(GitLabBackendProperties properties, ObjectProvider<SslBundles> sslBundles) {
-        DefaultUriBuilderFactory uris = new DefaultUriBuilderFactory(apiRoot(properties.baseUrl()));
+    public GitLabRestAdapter(GitLabBackendProperties properties, ObjectProvider<SslBundles> sslBundles,
+            Environment environment) {
+        DefaultUriBuilderFactory uris = new DefaultUriBuilderFactory(apiRoot(properties.baseUrl(),
+                environment.matchesProfiles(DEV_PROFILE) || properties.allowPlainHttp()));
         uris.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
         this.client = RestClient.builder()
                 .uriBuilderFactory(uris)
                 .requestFactory(requestFactory(properties, sslBundles))
-                .defaultStatusHandler(HttpStatusCode::isError, (request, response) -> {
+                .requestInterceptor(new BoundedBodyInterceptor(properties.maxResponseSize().toBytes()))
+                .defaultStatusHandler(status -> status.isError() || status.is3xxRedirection(), (request, response) -> {
                     // Status only: the body and headers of a failed call may echo the credential or carry backend
                     // detail, and the exception message ends up in the starter's tool_failed log line.
                     HttpStatusCode status = response.getStatusCode();
+                    if (status.is3xxRedirection()) {
+                        // Redirects are not followed (the credential must not go elsewhere) and an empty body
+                        // must not read as "not found": an SSO login page would turn into not_found_or_denied.
+                        throw new BackendResponseException("redirect " + status.value());
+                    }
                     throw status.is4xxClientError()
                             ? HttpClientErrorException.create(status, "", HttpHeaders.EMPTY, new byte[0], null)
                             : HttpServerErrorException.create(status, "", HttpHeaders.EMPTY, new byte[0], null);
@@ -138,7 +156,7 @@ public class GitLabRestAdapter implements GitLabPort {
                     return new FileMetadata(
                             required(headers.getFirst("X-Gitlab-File-Path")),
                             required(headers.getFirst("X-Gitlab-Commit-Id")),
-                            Long.parseLong(required(headers.getFirst("X-Gitlab-Size"))));
+                            size(headers.getFirst("X-Gitlab-Size")));
                 });
     }
 
@@ -188,17 +206,32 @@ public class GitLabRestAdapter implements GitLabPort {
             return Optional.empty();
         } catch (HttpClientErrorException.Unauthorized expired) {
             throw new CredentialRequiredException(SYSTEM);
+        } catch (RestClientResponseException | ResourceAccessException statusOrIo) {
+            // Status-only exceptions (see the status handler) and I/O failures: the starter maps 502-504 and
+            // unreachable backends to upstream_unavailable.
+            throw statusOrIo;
+        } catch (RestClientException unreadable) {
+            // A 2xx body that does not parse: the converter's message quotes the body.
+            throw new BackendResponseException("body not readable");
         }
     }
 
     private static String required(String value) {
         if (value == null || value.isBlank()) {
-            throw new IllegalStateException("GitLab response lacks a field the server relies on");
+            throw new BackendResponseException("field the server relies on is missing");
         }
         return value;
     }
 
-    private static String apiRoot(String baseUrl) {
+    private static long size(String header) {
+        try {
+            return Long.parseLong(required(header));
+        } catch (NumberFormatException notANumber) {
+            throw new BackendResponseException("size header is not a number");
+        }
+    }
+
+    private static String apiRoot(String baseUrl, boolean plainHttpAllowed) {
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new IllegalStateException("gitlab.backend.base-url (MCP_GITLAB_URL) must point at the GitLab instance");
         }
@@ -206,6 +239,14 @@ public class GitLabRestAdapter implements GitLabPort {
         if (uri.getHost() == null || !("https".equals(uri.getScheme()) || "http".equals(uri.getScheme()))
                 || uri.getQuery() != null || uri.getFragment() != null) {
             throw new IllegalStateException("gitlab.backend.base-url must be an absolute http(s) URL without query");
+        }
+        if (!"https".equals(uri.getScheme())) {
+            if (!plainHttpAllowed) {
+                // The user's credential travels in a header; over http it would cross the network in clear text.
+                throw new IllegalStateException("gitlab.backend.base-url must use https outside the 'dev' profile "
+                        + "(gitlab.backend.allow-plain-http exists for the mocks of mcp-platform-dev only)");
+            }
+            LOG.warn("event=backend_plain_http detail=\"credentials go to the backend unencrypted\"");
         }
         String root = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         return root + "/api/v4";

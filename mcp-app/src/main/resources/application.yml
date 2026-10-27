@@ -38,6 +38,9 @@ gitlab:
     ssl-bundle: ${MCP_GITLAB_SSL_BUNDLE:}
     connect-timeout: 2s
     read-timeout: 10s
+    max-response-size: 1MB
+    # Plain http outside 'dev' only for the mocks of mcp-platform-dev; never in a real deployment.
+    allow-plain-http: ${MCP_GITLAB_ALLOW_PLAIN_HTTP:false}
   files:
     # Larger files are refused without reading their content (get_file).
     max-bytes: ${MCP_GITLAB_FILE_MAX_BYTES:262144}
@@ -46,7 +49,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,prometheus
+        include: health
   endpoint:
     health:
       probes:

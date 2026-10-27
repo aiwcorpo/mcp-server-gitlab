@@ -58,7 +58,7 @@ class GetFileToolTest extends ServerTestSupport {
 
             assertInvalidArgument(binary, "binary content is not returned");
             assertThat(text(binary)).doesNotContain("PNG");
-            assertInvalidArgument(large, "The file is larger than 262144 bytes");
+            assertInvalidArgument(large, "The file is larger than 65536 bytes");
         }
         assertThat(BACKEND.requests()).as("the large file is never downloaded")
                 .noneMatch(seen -> seen.rawPath().contains("dump.sql/raw"));

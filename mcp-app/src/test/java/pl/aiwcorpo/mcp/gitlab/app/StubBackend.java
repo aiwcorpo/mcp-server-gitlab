@@ -29,6 +29,9 @@ import java.util.regex.Pattern;
  *   <li>files of project 42 at ref {@code main} or {@code v1.0} (commit {@link #COMMIT}): {@code README.md},
  *       {@code docs/guide.md}, {@code logo.png} (binary), {@code dump.sql} (over the size limit);</li>
  *   <li>merge request 1 of project 42; 3 is 403; notes can be added to 1;</li>
+ *   <li>{@code team-a/bad-json} answers 200 with a body that is not JSON, {@code team-a/redirect} answers 302 to
+ *       {@code /elsewhere} (never to be followed), {@code team-a/slow} answers after 3 s, {@code team-a/huge}
+ *       with a body over the 64 KB limit the tests configure;</li>
  *   <li>anything else: 404 with GitLab's {@code {"message":"404 ... Not Found"}}.</li>
  * </ul>
  * Any request carrying {@link #EXPIRED_TOKEN} is answered 401, like a revoked token.
@@ -69,6 +72,7 @@ final class StubBackend {
             HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
             StubBackend backend = new StubBackend(server);
             server.createContext("/", backend::handle);
+            server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
             server.start();
             return backend;
         } catch (IOException ex) {
@@ -147,6 +151,22 @@ final class StubBackend {
                      "namespace":{"id":7,"full_path":"team-a"},"runners_token":"GR1348941-not-for-the-model"}""");
         } else if (lower.equals("/api/v4/projects/team-a%2fforbidden")) {
             json(exchange, 403, "{\"message\":\"403 Forbidden\"}");
+        } else if (lower.equals("/api/v4/projects/team-a%2fbad-json")) {
+            json(exchange, 200, "<html>login ... " + privateToken);
+        } else if (lower.equals("/api/v4/projects/team-a%2fredirect")) {
+            exchange.getResponseHeaders().set("Location", baseUrl() + "/elsewhere");
+            exchange.sendResponseHeaders(302, -1);
+            exchange.close();
+        } else if (lower.equals("/api/v4/projects/team-a%2fslow")) {
+            try {
+                Thread.sleep(3_000);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            json(exchange, 200, "{\"id\":50,\"path_with_namespace\":\"team-a/slow\"}");
+        } else if (lower.equals("/api/v4/projects/team-a%2fhuge")) {
+            json(exchange, 200, "{\"id\":51,\"path_with_namespace\":\"team-a/huge\",\"description\":\""
+                    + "x".repeat(200_000) + "\"}");
         } else if (lower.equals("/api/v4/projects/team-a%2fbroken")) {
             json(exchange, 500, "{\"message\":\"500 Internal Server Error\",\"seen\":\"" + privateToken + "\"}");
         } else if (child.matches() && child.group(1).equals("42")) {

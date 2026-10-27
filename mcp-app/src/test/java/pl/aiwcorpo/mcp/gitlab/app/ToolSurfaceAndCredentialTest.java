@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
+import pl.aiwcorpo.mcp.platform.security.BackendCredential;
 import pl.aiwcorpo.mcp.platform.security.CredentialRequiredException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -113,7 +114,7 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
 
     @Test
     void anOAuthTokenGoesInTheAuthorizationHeader() {
-        try (McpSyncClient client = clientWithCredential("Bearer gloas-oauth-of-jkowalski", "user-oauth")) {
+        try (McpSyncClient client = clientWithCredential("Bearer gloas-oauth-of-jkowalski", BackendCredential.Type.USER_OAUTH)) {
             assertThat(call(client, "get_file", README).isError()).isFalse();
         }
         assertThat(BACKEND.credentials()).containsOnly("Authorization Bearer gloas-oauth-of-jkowalski");
@@ -121,7 +122,7 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
 
     @Test
     void aPersonalAccessTokenGoesInPrivateToken() {
-        try (McpSyncClient client = clientWithCredential("Token glpat-jkowalski-7f3a", "user-secret")) {
+        try (McpSyncClient client = clientWithCredential("Token glpat-jkowalski-7f3a", BackendCredential.Type.USER_SECRET)) {
             assertThat(call(client, "get_file", README).isError()).isFalse();
         }
         assertThat(BACKEND.requests()).allSatisfy(seen -> {
@@ -132,16 +133,16 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
 
     @Test
     void anExpiredOAuthTokenAsksToReconnect() {
-        try (McpSyncClient client = clientWithCredential("Bearer " + StubBackend.EXPIRED_TOKEN, "user-oauth")) {
+        try (McpSyncClient client = clientWithCredential("Bearer " + StubBackend.EXPIRED_TOKEN, BackendCredential.Type.USER_OAUTH)) {
             assertCredentialRequired(call(client, "get_file", README));
         }
     }
 
     @Test
     void credentialsGitLabDoesNotTakeAreRefusedBeforeTheBackend() {
-        try (McpSyncClient serviceAccount = clientWithCredential("Bearer svc-token", "service-account");
-                McpSyncClient basic = clientWithCredential("Basic amtvd2Fsc2tpOnNlY3JldA==", "user-secret");
-                McpSyncClient oauthAsApiKey = clientWithCredential("ApiKey gloas-oauth", "user-oauth")) {
+        try (McpSyncClient serviceAccount = clientWithCredential("Bearer svc-token", BackendCredential.Type.SERVICE_ACCOUNT);
+                McpSyncClient basic = clientWithCredential("Basic amtvd2Fsc2tpOnNlY3JldA==", BackendCredential.Type.USER_SECRET);
+                McpSyncClient oauthAsApiKey = clientWithCredential("ApiKey gloas-oauth", BackendCredential.Type.USER_OAUTH)) {
             for (McpSyncClient client : List.of(serviceAccount, basic, oauthAsApiKey)) {
                 McpSchema.CallToolResult result = call(client, "get_file", README);
                 assertThat(result.isError()).isTrue();

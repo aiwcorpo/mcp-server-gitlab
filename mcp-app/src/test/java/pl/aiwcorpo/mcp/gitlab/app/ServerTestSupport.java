@@ -3,7 +3,6 @@ package pl.aiwcorpo.mcp.gitlab.app;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
-import io.modelcontextprotocol.client.transport.customizer.McpSyncHttpClientRequestCustomizer;
 import io.modelcontextprotocol.spec.McpSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,11 +13,13 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Map;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import pl.aiwcorpo.mcp.platform.security.BackendCredential;
 import pl.aiwcorpo.mcp.platform.test.TestGateway;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -32,6 +33,9 @@ abstract class ServerTestSupport {
 
     static final String SERVER_ID = "mcp-gitlab";
     static final String SYSTEM = "gitlab";
+
+    /** True only for a system outside the contracts' SystemId; gitlab is on the list, so it is false. */
+    static final boolean TRIAL_SYSTEM = false;
     static final String ENDPOINT = "/mcp";
     static final Set<String> CONTRACT_SYSTEMS = contractSystems();
 
@@ -42,6 +46,10 @@ abstract class ServerTestSupport {
     static void environment(DynamicPropertyRegistry registry) {
         GATEWAY.serverProperties().forEach((name, value) -> registry.add(name, () -> value));
         registry.add("gitlab.backend.base-url", BACKEND::baseUrl);
+        // Short limits so the timeout and size tests run quickly; StubBackend's slow and huge answers exceed them.
+        registry.add("gitlab.backend.read-timeout", () -> "1s");
+        registry.add("gitlab.backend.max-response-size", () -> "64KB");
+        registry.add("gitlab.files.max-bytes", () -> "65536");
     }
 
     @LocalServerPort
@@ -53,24 +61,15 @@ abstract class ServerTestSupport {
 
     /** An MCP client that reaches the server the way the gateway does, with {@code credential} as C3 header. */
     McpSyncClient clientWithCredential(String credential) {
-        return clientWithCredential(credential, "user-secret");
+        return clientWithCredential(credential, BackendCredential.Type.USER_SECRET);
     }
 
-    /**
-     * Same, with {@code X-MCP-Credential-Type} set to {@code type}: TestGateway always sends {@code user-secret},
-     * while GitLab is also connected through OAuth ({@code user-oauth}).
-     */
-    McpSyncClient clientWithCredential(String credential, String type) {
-        McpSyncHttpClientRequestCustomizer gateway = GATEWAY.asGateway(user -> user.username("jkowalski"), credential);
+    /** Same, with {@code X-MCP-Credential-Type} set to {@code type}: GitLab is also connected through OAuth. */
+    McpSyncClient clientWithCredential(String credential, BackendCredential.Type type) {
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport.builder(baseUrl())
                 .endpoint(ENDPOINT)
                 .openConnectionOnStartup(false)
-                .httpRequestCustomizer((request, method, uri, body, context) -> {
-                    gateway.customize(request, method, uri, body, context);
-                    if (credential != null) {
-                        request.setHeader("X-MCP-Credential-Type", type);
-                    }
-                })
+                .httpRequestCustomizer(GATEWAY.asGateway(user -> user.username("jkowalski"), credential, type))
                 .build();
         McpSyncClient client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(20)).build();
         client.initialize();
@@ -79,18 +78,23 @@ abstract class ServerTestSupport {
 
     /**
      * The starter sends only C10 errors valid against {@code tool-error.schema.json}, whose {@code system} is the
-     * closed {@code SystemId} list of the contracts. For a system outside it (the template's placeholder, a
-     * trial name) a {@code credential_required} becomes {@code internal_error}; for the platform's systems the
-     * full error with the portal link is expected.
+     * closed {@code SystemId} list of the contracts. A trial system (outside the list) gets {@code internal_error}
+     * instead; a real system must get the full error with the portal link, never {@code internal_error}.
      */
     static void assertCredentialRequired(McpSchema.CallToolResult result) {
         assertThat(result.isError()).isTrue();
-        if (CONTRACT_SYSTEMS.contains(SYSTEM)) {
+        if (TRIAL_SYSTEM) {
+            assertThat(CONTRACT_SYSTEMS).as("a trial system is outside SystemId").doesNotContain(SYSTEM);
+            assertThat(text(result)).contains("\"error\":\"internal_error\"");
+        } else {
             assertThat(text(result)).contains("\"error\":\"credential_required\"", "\"system\":\"" + SYSTEM + "\"",
                     "\"connectUrl\":\"http://localhost:18090/connections?system=" + SYSTEM + "\"");
-        } else {
-            assertThat(text(result)).contains("\"error\":\"internal_error\"");
         }
+    }
+
+    @Test
+    void contractSystemIsKnown() {
+        assertThat(CONTRACT_SYSTEMS.contains(SYSTEM)).isEqualTo(!TRIAL_SYSTEM);
     }
 
     private static Set<String> contractSystems() {
