@@ -3,6 +3,7 @@ package pl.aiwcorpo.mcp.gitlab.app;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import io.modelcontextprotocol.client.transport.customizer.McpSyncHttpClientRequestCustomizer;
 import io.modelcontextprotocol.spec.McpSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,10 +53,24 @@ abstract class ServerTestSupport {
 
     /** An MCP client that reaches the server the way the gateway does, with {@code credential} as C3 header. */
     McpSyncClient clientWithCredential(String credential) {
+        return clientWithCredential(credential, "user-secret");
+    }
+
+    /**
+     * Same, with {@code X-MCP-Credential-Type} set to {@code type}: TestGateway always sends {@code user-secret},
+     * while GitLab is also connected through OAuth ({@code user-oauth}).
+     */
+    McpSyncClient clientWithCredential(String credential, String type) {
+        McpSyncHttpClientRequestCustomizer gateway = GATEWAY.asGateway(user -> user.username("jkowalski"), credential);
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport.builder(baseUrl())
                 .endpoint(ENDPOINT)
                 .openConnectionOnStartup(false)
-                .httpRequestCustomizer(GATEWAY.asGateway(user -> user.username("jkowalski"), credential))
+                .httpRequestCustomizer((request, method, uri, body, context) -> {
+                    gateway.customize(request, method, uri, body, context);
+                    if (credential != null) {
+                        request.setHeader("X-MCP-Credential-Type", type);
+                    }
+                })
                 .build();
         McpSyncClient client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(20)).build();
         client.initialize();
@@ -88,6 +103,18 @@ abstract class ServerTestSupport {
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
+    }
+
+    /** 404 and 403 from GitLab, and every other "not visible", look exactly the same to the client. */
+    static void assertNotFoundOrDenied(McpSchema.CallToolResult result) {
+        assertThat(result.isError()).isTrue();
+        assertThat(text(result)).isEqualTo(
+                "{\"error\":\"not_found_or_denied\",\"message\":\"The GitLab resource does not exist or you have no access to it.\"}");
+    }
+
+    static void assertInvalidArgument(McpSchema.CallToolResult result, String messageFragment) {
+        assertThat(result.isError()).isTrue();
+        assertThat(text(result)).contains("\"error\":\"invalid_argument\"", messageFragment);
     }
 
     static McpSchema.CallToolResult call(McpSyncClient client, String tool, Map<String, Object> arguments) {

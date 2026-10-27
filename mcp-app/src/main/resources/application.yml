@@ -38,6 +38,9 @@ gitlab:
     ssl-bundle: ${MCP_GITLAB_SSL_BUNDLE:}
     connect-timeout: 2s
     read-timeout: 10s
+  files:
+    # Larger files are refused without reading their content (get_file).
+    max-bytes: ${MCP_GITLAB_FILE_MAX_BYTES:262144}
 
 management:
   endpoints:

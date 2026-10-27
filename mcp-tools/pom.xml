@@ -24,5 +24,22 @@
             <groupId>pl.aiwcorpo.mcp</groupId>
             <artifactId>mcp-platform-starter</artifactId>
         </dependency>
+        <!-- Identifier vectors of the contract (resource-ids/gitlab-*.json) for the argument checks. -->
+        <dependency>
+            <groupId>pl.aiwcorpo.mcp</groupId>
+            <artifactId>mcp-contracts</artifactId>
+            <classifier>test-vectors</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

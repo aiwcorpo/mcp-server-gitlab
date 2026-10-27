@@ -16,8 +16,9 @@ import pl.aiwcorpo.mcp.platform.test.TestGateway;
 /** Only the gateway gets in: no internal JWT, or one not meant for this call, is 401 and never anonymous. */
 class GatewayOnlyAccessTest extends ServerTestSupport {
 
-    private static final String GET_RECORD = """
-            {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_record","arguments":{"recordId":"ABC-1"}}}""";
+    private static final String GET_MERGE_REQUEST = """
+            {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_merge_request",
+            "arguments":{"project":"team-a/app","iid":1}}}""";
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
@@ -28,7 +29,7 @@ class GatewayOnlyAccessTest extends ServerTestSupport {
 
     @Test
     void withoutJwtEveryMcpRequestIs401() throws Exception {
-        HttpResponse<String> call = post(GET_RECORD, Map.of("X-MCP-Credential", "Bearer stolen-pat",
+        HttpResponse<String> call = post(GET_MERGE_REQUEST, Map.of("X-MCP-Credential", "Bearer stolen-pat",
                 "X-MCP-Credential-Type", "user-secret"));
         assertThat(call.statusCode()).isEqualTo(401);
         assertThat(call.headers().firstValue("WWW-Authenticate")).hasValue("Bearer");
@@ -39,24 +40,24 @@ class GatewayOnlyAccessTest extends ServerTestSupport {
                 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18",
                 "capabilities":{},"clientInfo":{"name":"intruder","version":"1"}}}""", Map.of()).statusCode())
                 .isEqualTo(401);
-        assertThat(BACKEND.authorizations()).isEmpty();
+        assertThat(BACKEND.requests()).isEmpty();
     }
 
     @Test
     void aTokenForAnotherServerToolOrRequestIsRejected() throws Exception {
-        TestGateway.Minted otherServer = GATEWAY.user().tool("get_record").audience(anotherServerId()).mint();
-        assertThat(post(GET_RECORD, otherServer.headers()).statusCode()).isEqualTo(401);
+        TestGateway.Minted otherServer = GATEWAY.user().tool("get_merge_request").audience(anotherServerId()).mint();
+        assertThat(post(GET_MERGE_REQUEST, otherServer.headers()).statusCode()).isEqualTo(401);
 
-        TestGateway.Minted otherTool = GATEWAY.user().tool("search_records").mint();
-        assertThat(post(GET_RECORD, otherTool.headers()).statusCode()).isEqualTo(401);
+        TestGateway.Minted otherTool = GATEWAY.user().tool("get_file").mint();
+        assertThat(post(GET_MERGE_REQUEST, otherTool.headers()).statusCode()).isEqualTo(401);
 
         TestGateway.Minted service = GATEWAY.service().mint();
-        assertThat(post(GET_RECORD, service.headers()).statusCode()).isEqualTo(401);
+        assertThat(post(GET_MERGE_REQUEST, service.headers()).statusCode()).isEqualTo(401);
 
-        TestGateway.Minted expired = GATEWAY.user().tool("get_record")
+        TestGateway.Minted expired = GATEWAY.user().tool("get_merge_request")
                 .issuedAt(Instant.now().minusSeconds(300)).mint();
-        assertThat(post(GET_RECORD, expired.headers()).statusCode()).isEqualTo(401);
-        assertThat(BACKEND.authorizations()).isEmpty();
+        assertThat(post(GET_MERGE_REQUEST, expired.headers()).statusCode()).isEqualTo(401);
+        assertThat(BACKEND.requests()).isEmpty();
     }
 
     @Test
