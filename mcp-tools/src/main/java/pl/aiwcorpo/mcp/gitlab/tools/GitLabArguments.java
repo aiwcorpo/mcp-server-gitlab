@@ -31,6 +31,9 @@ final class GitLabArguments {
      */
     private static final Pattern QUICK_ACTION = Pattern.compile("(?m)^[ \\t]*/[A-Za-z]");
 
+    /** {@code @all} notifies every member of the project from one comment. */
+    private static final Pattern MENTION_ALL = Pattern.compile("(?<![\\w@])@all(?![\\w-])");
+
     private GitLabArguments() {
     }
 
@@ -125,6 +128,9 @@ final class GitLabArguments {
         if (QUICK_ACTION.matcher(body).find()) {
             throw new InvalidToolArgumentException("body must not contain a line starting with '/': GitLab would "
                     + "run it as a quick action");
+        }
+        if (MENTION_ALL.matcher(body).find()) {
+            throw new InvalidToolArgumentException("body must not mention @all: it notifies every member of the project");
         }
         return body;
     }

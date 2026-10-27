@@ -148,7 +148,7 @@ class GitLabServiceTest {
         @Override
         public Optional<FoundMergeRequest> findMergeRequest(long projectId, long iid) {
             long owner = iid == 1 ? PROJECT_ID : 1000;
-            return Optional.of(new FoundMergeRequest(owner, new MergeRequest(null, iid, "t", null, "opened", false, "f", "main", "u",
+            return Optional.of(new FoundMergeRequest(owner, new MergeRequest(null, iid, null, null, "opened", false, null, null, null,
                     List.of(), List.of(), List.of(), null, null, null, null, false, null)));
         }
 
@@ -158,7 +158,7 @@ class GitLabServiceTest {
         }
 
         private static ProjectSummary summary(String path) {
-            return new ProjectSummary(path, path, null, "main", false, null, null);
+            return new ProjectSummary(path, null, null, null, false, null, null);
         }
     }
 }

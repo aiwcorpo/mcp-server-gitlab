@@ -82,6 +82,16 @@ class GitLabArgumentsTest {
         }
     }
 
+    @Test
+    void commentBodyCannotMentionEveryone() {
+        for (String ok : new String[] {"thanks @anowak", "mail me: a@all.internal", "see @alligator", "@all-hands doc"}) {
+            assertThatCode(() -> GitLabArguments.commentBody(ok)).as(ok).doesNotThrowAnyException();
+        }
+        for (String bad : new String[] {"@all please look", "cc @all", "(@all)", "x\n@all."}) {
+            assertThatThrownBy(() -> GitLabArguments.commentBody(bad)).as(bad).isInstanceOf(InvalidToolArgumentException.class);
+        }
+    }
+
     private static void checkVectors(String resource, UnaryOperator<String> check) throws IOException {
         JsonNode vectors = read(resource);
         assertThat(vectors.path("valid").size()).isPositive();

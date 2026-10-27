@@ -2,11 +2,14 @@ package pl.aiwcorpo.mcp.gitlab.core.domain;
 
 import java.util.List;
 
-/** A merge request reduced to what a reviewer needs. */
-public record MergeRequest(String project, long iid, String title, UntrustedText description,
-        String state, boolean draft, String sourceBranch, String targetBranch, String author,
-        List<String> assignees, List<String> reviewers, List<String> labels, String createdAt, String updatedAt,
-        String mergedAt, String detailedMergeStatus, boolean hasConflicts, String webUrl) {
+/**
+ * A merge request reduced to what a reviewer needs. Everything a GitLab user types (title, description,
+ * branches, labels, user names) is {@link UntrustedText}; states, flags, timestamps and the URL are the system's.
+ */
+public record MergeRequest(String project, long iid, UntrustedText title, UntrustedText description,
+        String state, boolean draft, UntrustedText sourceBranch, UntrustedText targetBranch, UntrustedText author,
+        List<UntrustedText> assignees, List<UntrustedText> reviewers, List<UntrustedText> labels, String createdAt,
+        String updatedAt, String mergedAt, String detailedMergeStatus, boolean hasConflicts, String webUrl) {
 
     public MergeRequest {
         assignees = List.copyOf(assignees);
