@@ -13,10 +13,10 @@ do modelu, który może go potraktować jak instrukcję. Wzorcem jest `get_merge
    (np. `PRIVATE-TOKEN` GitLaba) `credential.value()`. 404 i 403 systemu -> pusty wynik (jeden kod
    `not_found_or_denied`), 401 -> `CredentialRequiredException(SYSTEM)`. Odpowiedź do prywatnego DTO z
    `@JsonIgnoreProperties(ignoreUnknown = true)`, potem do domeny.
-4. `mcp-tools`: cienka metoda `@Tool` z `@ToolRisk`, `@ArgumentLimits` na każdym argumencie (tekst bez
-   `maxLength` zatrzymuje start), walidacją w `GitLabArguments` i wywołaniem przypadku użycia;
+4. `mcp-tools`: cienka metoda `@Tool` z `@ToolRisk`, `@ArgumentLimits` ze startera (`pl.aiwcorpo.mcp.platform.input`) na każdym argumencie
+   (tekst bez `maxLength` zatrzymuje start; identyfikatory przez `contractPattern`), walidacją w `GitLabArguments` i wywołaniem przypadku użycia;
    mapowanie wyjątku domeny na kod C10 w `GitLabToolErrors`.
-5. `mcp-app`: dopisanie beana narzędzia w `McpToolsConfiguration` (jawna lista; sam `@Tool` nie wystarczy),
+5. `mcp-app`: bean narzędzia na liście w `McpToolsConfiguration` (`SchemaLimitedToolCallbacks.of(...)`; sam `@Tool` nie wystarczy),
    test w `mcp-app/src/test` przez `ServerTestSupport`, odpowiedź systemu w `StubBackend`.
 6. `docs/api/tools-catalog.md` i tabela narzędzi w README.
 

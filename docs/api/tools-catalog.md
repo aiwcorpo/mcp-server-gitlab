@@ -9,14 +9,18 @@ tą tabelą.
 | `list_projects` | `READ_ONLY` | `read` | `group` (`GitLabGroupPath`, maks. 1024) | `mcp-gitlab-read` | z C3: `user-secret` -> `PRIVATE-TOKEN`, `user-oauth`/`token-exchange` -> `Authorization: Bearer` |
 | `get_file` | `READ_ONLY` | `read` | `project` (`GitLabProjectPath`, maks. 1024), `path` (1-1024, względna, bez `..`/`.`/`//`/`\`/`%`), `ref` opcjonalny (gałąź, tag, SHA; maks. 255) | `mcp-gitlab-read` | jw. |
 | `get_merge_request` | `READ_ONLY` | `read` | `project`, `iid` (1..2147483647) | `mcp-gitlab-read` | jw. |
-| `comment_merge_request` | `UPDATE` | `update` | `project`, `iid`, `body` (1-10000, bez quick actions) | `mcp-gitlab-write` | jw. |
+| `comment_merge_request` | `UPDATE` | `update` | `project`, `iid`, `body` (1-10000, bez quick actions i `@all`) | `mcp-gitlab-write` | jw. |
 
 Zasoby C7 (do `@ResourceRef` ze starterem beta, M3): `group` -> `GitLab::Group`, `project` -> `GitLab::Project`.
 Identyfikator i rodzic zasobu to `full_path`/`path_with_namespace` zwrócone przez GitLaba, nigdy argument.
 
-Wyniki: tekst pisany przez użytkowników GitLaba (treść pliku, opisy) jest obiektem
-`{kind: "untrusted-data", origin, text, truncated}`; `origin` to `gitlab-file-content`,
-`gitlab-project-description` albo `gitlab-merge-request-description`.
+Wyniki: tekst pisany przez użytkowników GitLaba jest obiektem `UntrustedText` (CC-072):
+`{kind: "untrusted-data", format: "text/plain" | "text/markdown", origin, text, truncated}`. `origin` to
+`gitlab-file-content`, `gitlab-project-name`, `gitlab-project-description`, `gitlab-branch`,
+`gitlab-merge-request-title`, `gitlab-merge-request-description`, `gitlab-label` albo `gitlab-username`.
+Pola `name`, `description`, `defaultBranch` (projekt) oraz `title`, `description`, `sourceBranch`,
+`targetBranch`, `author`, `assignees[]`, `reviewers[]`, `labels[]` (merge request) i `content` (plik) mają ten
+kształt; pozostałe to pola systemu.
 
 Wywołania GitLab API v4 (wszystkie jako użytkownik, bez przekierowań):
 
