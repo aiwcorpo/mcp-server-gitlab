@@ -31,8 +31,12 @@ final class GitLabArguments {
      */
     private static final Pattern QUICK_ACTION = Pattern.compile("(?m)^[ \\t]*/[A-Za-z]");
 
-    /** {@code @all} notifies every member of the project from one comment. */
-    private static final Pattern MENTION_ALL = Pattern.compile("(?<![\\w@])@all(?![\\w-])");
+    /**
+     * {@code @all} notifies every member of the project from one comment. Only a word character before it
+     * defeats the mention in GitLab (an e-mail address), so anything else, another {@code @} included, is refused;
+     * case is ignored because it is not known to matter to GitLab.
+     */
+    private static final Pattern MENTION_ALL = Pattern.compile("(?<!\\w)@all(?![\\w-])", Pattern.CASE_INSENSITIVE);
 
     private GitLabArguments() {
     }

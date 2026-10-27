@@ -87,7 +87,7 @@ class GitLabArgumentsTest {
         for (String ok : new String[] {"thanks @anowak", "mail me: a@all.internal", "see @alligator", "@all-hands doc"}) {
             assertThatCode(() -> GitLabArguments.commentBody(ok)).as(ok).doesNotThrowAnyException();
         }
-        for (String bad : new String[] {"@all please look", "cc @all", "(@all)", "x\n@all."}) {
+        for (String bad : new String[] {"@all please look", "cc @all", "(@all)", "x\n@all.", "@@all", "x @@all", "@all.", "@ALL", "@All please"}) {
             assertThatThrownBy(() -> GitLabArguments.commentBody(bad)).as(bad).isInstanceOf(InvalidToolArgumentException.class);
         }
     }
