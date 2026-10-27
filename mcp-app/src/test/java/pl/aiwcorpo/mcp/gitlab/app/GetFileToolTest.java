@@ -95,11 +95,13 @@ class GetFileToolTest extends ServerTestSupport {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             for (String project : new String[] {"app", "team-a/app.git", "team-a/../x", "42"}) {
                 assertInvalidArgument(call(client, "get_file", Map.of("project", project, "path", "README.md")),
-                        "project must be a GitLab project path");
+                        "project does not match the required format");
             }
-            for (String path : new String[] {"../../etc/passwd", "/etc/passwd", "a//b", "a/./b", "a%2F..", "x".repeat(1025)}) {
+            for (String path : new String[] {"../../etc/passwd", "/etc/passwd", "a//b", "a/./b", "a%2F.."}) {
                 assertInvalidArgument(call(client, "get_file", Map.of("project", "team-a/app", "path", path)), "path must");
             }
+            assertInvalidArgument(call(client, "get_file", Map.of("project", "team-a/app", "path", "x".repeat(1025))),
+                    "path is longer than 1024 characters");
             for (String ref : new String[] {"-x", "a..b", "main&private_token=1", "HEAD~1"}) {
                 assertInvalidArgument(call(client, "get_file", Map.of("project", "team-a/app", "path", "README.md", "ref", ref)),
                         "ref must be a branch, tag or commit SHA");

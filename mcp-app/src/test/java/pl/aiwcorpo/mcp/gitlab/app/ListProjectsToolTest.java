@@ -65,9 +65,9 @@ class ListProjectsToolTest extends ServerTestSupport {
     void anInvalidGroupNeverReachesGitLab() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             for (String group : new String[] {"team-a/", "../team-b", "team a", "team-a?x=1", "*", ""}) {
-                assertInvalidArgument(call(client, "list_projects", Map.of("group", group)), "group must be a GitLab group path");
+                assertInvalidArgument(call(client, "list_projects", Map.of("group", group)), "Invalid arguments: group");
             }
-            assertInvalidArgument(call(client, "list_projects", Map.of()), "group must be a GitLab group path");
+            assertInvalidArgument(call(client, "list_projects", Map.of()), "Invalid arguments: group");
         }
         assertThat(BACKEND.requests()).isEmpty();
     }

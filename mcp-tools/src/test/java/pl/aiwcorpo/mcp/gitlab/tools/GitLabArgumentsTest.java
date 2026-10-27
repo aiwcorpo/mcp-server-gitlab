@@ -17,12 +17,11 @@ class GitLabArgumentsTest {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @Test
-    void pathPatternsAreTheContractPatterns() throws IOException {
+    void pathLimitIsTheContractLimit() throws IOException {
         JsonNode defs = read("mcp-contracts/schemas/common.schema.json").path("$defs");
 
-        assertThat(GitLabArguments.GROUP_PATH.pattern()).isEqualTo(defs.path("GitLabGroupPath").path("pattern").asString());
-        assertThat(GitLabArguments.PROJECT_PATH.pattern()).isEqualTo(defs.path("GitLabProjectPath").path("pattern").asString());
         assertThat(defs.path("GitLabGroupPath").path("maxLength").asInt()).isEqualTo(GitLabArguments.PATH_MAX_LENGTH);
+        assertThat(defs.path("GitLabProjectPath").path("maxLength").asInt()).isEqualTo(GitLabArguments.PATH_MAX_LENGTH);
     }
 
     @Test

@@ -71,13 +71,13 @@ class CommentMergeRequestToolTest extends ServerTestSupport {
                         Map.of("project", "team-a/app", "iid", 1, "body", body)), "quick action");
             }
             assertInvalidArgument(call(client, "comment_merge_request",
-                    Map.of("project", "team-a/app", "iid", 1, "body", "x".repeat(10_001))), "body must be 1-10000 characters");
+                    Map.of("project", "team-a/app", "iid", 1, "body", "x".repeat(10_001))), "body is longer than 10000 characters");
             assertInvalidArgument(call(client, "comment_merge_request",
-                    Map.of("project", "team-a/app", "iid", 1, "body", " ")), "body must be 1-10000 characters");
+                    Map.of("project", "team-a/app", "iid", 1, "body", " ")), "body must be 1-10000 characters and not blank");
             assertInvalidArgument(call(client, "comment_merge_request",
-                    Map.of("project", "team-a/app", "iid", 0, "body", "ok")), "iid must be");
+                    Map.of("project", "team-a/app", "iid", 0, "body", "ok")), "iid is below the minimum 1");
             assertInvalidArgument(call(client, "comment_merge_request",
-                    Map.of("project", "/team-a/app", "iid", 1, "body", "ok")), "project must be");
+                    Map.of("project", "/team-a/app", "iid", 1, "body", "ok")), "project does not match the required format");
         }
         assertThat(BACKEND.requests()).isEmpty();
     }

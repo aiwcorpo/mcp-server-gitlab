@@ -1,12 +1,16 @@
 package pl.aiwcorpo.mcp.gitlab.tools;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.regex.Pattern;
 import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Checks of tool arguments, before anything reaches GitLab. Group and project paths use the patterns of the
  * contract (mcp-contracts {@code common.schema.json}, {@code GitLabGroupPath} and {@code GitLabProjectPath},
- * CC-056); a test compares them with the contract's vectors.
+ * CC-056), the same ones the tools publish in their input schemas; a test runs the contract's vectors.
  */
 final class GitLabArguments {
 
@@ -15,11 +19,8 @@ final class GitLabArguments {
     static final int BODY_MAX_LENGTH = 10_000;
     static final long IID_MAX = Integer.MAX_VALUE;
 
-    private static final String SEGMENT = "[A-Za-z0-9](?:[._-]?[A-Za-z0-9])*";
-    static final Pattern GROUP_PATH = Pattern.compile(
-            "^(?!.*\\.(?:git|atom)$)" + SEGMENT + "(?:/" + SEGMENT + "){0,19}$");
-    static final Pattern PROJECT_PATH = Pattern.compile(
-            "^(?!.*\\.(?:git|atom)$)" + SEGMENT + "(?:/" + SEGMENT + "){1,20}$");
+    static final Pattern GROUP_PATH = contractPattern("GitLabGroupPath");
+    static final Pattern PROJECT_PATH = contractPattern("GitLabProjectPath");
 
     /** Branch and tag names, a conservative subset of git-check-ref-format; commit SHAs fit too. */
     private static final Pattern REF = Pattern.compile("[A-Za-z0-9_][A-Za-z0-9._/-]*");
@@ -31,6 +32,27 @@ final class GitLabArguments {
     private static final Pattern QUICK_ACTION = Pattern.compile("(?m)^[ \\t]*/[A-Za-z]");
 
     private GitLabArguments() {
+    }
+
+    /**
+     * The second line of defence behind the schema the starter enforces: the same pattern, read from the
+     * contract's {@code common.schema.json} instead of copied.
+     */
+    private static Pattern contractPattern(String definition) {
+        String resource = "/mcp-contracts/schemas/common.schema.json";
+        try (InputStream in = GitLabArguments.class.getResourceAsStream(resource)) {
+            if (in == null) {
+                throw new IllegalStateException(resource + " is missing: mcp-contracts must be on the classpath");
+            }
+            String pattern = JsonMapper.builder().build().readTree(in).path("$defs").path(definition)
+                    .path("pattern").asString(null);
+            if (pattern == null) {
+                throw new IllegalStateException(definition + " has no pattern in common.schema.json");
+            }
+            return Pattern.compile(pattern);
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
     }
 
     static String group(String group) {

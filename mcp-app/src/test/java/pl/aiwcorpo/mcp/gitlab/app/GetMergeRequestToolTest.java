@@ -66,14 +66,14 @@ class GetMergeRequestToolTest extends ServerTestSupport {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             for (Object iid : new Object[] {0, -1, 2_147_483_648L}) {
                 assertInvalidArgument(call(client, "get_merge_request", Map.of("project", "team-a/app", "iid", iid)),
-                        "iid must be the merge request number");
+                        "Invalid arguments: iid");
             }
             McpSchema.CallToolResult notANumber = call(client, "get_merge_request",
                     Map.of("project", "team-a/app", "iid", "1/notes"));
             assertThat(notANumber.isError()).isTrue();
             assertThat(text(notANumber)).contains("\"error\":\"invalid_argument\"");
             assertInvalidArgument(call(client, "get_merge_request", Map.of("project", "team-a", "iid", 1)),
-                    "project must be a GitLab project path");
+                    "project does not match the required format");
         }
         assertThat(BACKEND.requests()).isEmpty();
     }

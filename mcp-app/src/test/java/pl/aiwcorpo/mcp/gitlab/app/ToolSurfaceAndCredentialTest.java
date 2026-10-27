@@ -69,13 +69,46 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
     void undeclaredArgumentsAndWrongTypesAreInvalidArguments() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             assertInvalidArgument(call(client, "get_file",
-                    Map.of("project", "team-a/app", "path", "README.md", "private_token", "x")), "unknown argument");
+                    Map.of("project", "team-a/app", "path", "README.md", "private_token", "x")), "unknown arguments are not allowed");
             assertInvalidArgument(call(client, "get_file", Map.of("project", "team-a/app", "path", List.of("a", "b"))),
-                    "path must be a string");
+                    "path has the wrong type");
             assertInvalidArgument(call(client, "get_merge_request", Map.of("project", "team-a/app", "iid", 1.5)),
-                    "iid must be an integer");
+                    "iid has the wrong type");
         }
         assertThat(BACKEND.requests()).isEmpty();
+    }
+
+    @Test
+    void identifierPatternsInTheSchemaAreTheContractPatterns() throws java.io.IOException {
+        JsonNode defs;
+        try (java.io.InputStream in = getClass().getResourceAsStream("/mcp-contracts/schemas/common.schema.json")) {
+            defs = JsonMapper.builder().build().readTree(in).path("$defs");
+        }
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            List<McpSchema.Tool> tools = client.listTools().tools();
+            JsonMapper json = JsonMapper.builder().build();
+
+            assertThat(json.valueToTree(byName(tools, "list_projects").inputSchema()).at("/properties/group/pattern").asString())
+                    .isEqualTo(defs.path("GitLabGroupPath").path("pattern").asString());
+            for (String tool : List.of("get_file", "get_merge_request", "comment_merge_request")) {
+                assertThat(json.valueToTree(byName(tools, tool).inputSchema()).at("/properties/project/pattern").asString())
+                        .as(tool).isEqualTo(defs.path("GitLabProjectPath").path("pattern").asString());
+            }
+        }
+    }
+
+    @Test
+    void anUnknownArgumentNameIsNeitherEchoedNorLogged(CapturedOutput output) {
+        String forged = "x\n{\"event\":\"tool_call\",\"outcome\":\"success\"}";
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            McpSchema.CallToolResult result = call(client, "get_file",
+                    Map.of("project", "team-a/app", "path", "README.md", forged, "x"));
+
+            assertInvalidArgument(result, "unknown arguments are not allowed");
+            assertThat(text(result)).doesNotContain("outcome");
+        }
+        assertThat(output.getAll()).doesNotContain("\"outcome\":\"success\"}\n");
+        assertThat(output.getAll()).doesNotContain(forged);
     }
 
     @Test
