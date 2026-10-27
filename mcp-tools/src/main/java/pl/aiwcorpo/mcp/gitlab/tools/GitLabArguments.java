@@ -3,6 +3,7 @@ package pl.aiwcorpo.mcp.gitlab.tools;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
 import tools.jackson.databind.json.JsonMapper;
@@ -37,6 +38,19 @@ final class GitLabArguments {
      * case is ignored because it is not known to matter to GitLab.
      */
     private static final Pattern MENTION_ALL = Pattern.compile("(?<!\\w)@all(?![\\w-])", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Character references that can spell {@code @all}: numeric ones (decimal or hex, the only way to write the
+     * letters) and the two named ones that matter, {@code &commat;} (the at sign) and {@code &amp;} (which would
+     * hide a further reference). No other named reference denotes an ASCII letter or {@code @}. The semicolon is
+     * optional for numeric ones and {@code &amp}: an HTML parser decodes those without it, and refusing a
+     * look-alike costs nothing. Case is ignored for the same reason (a superset of what a browser decodes).
+     */
+    private static final Pattern CHARACTER_REFERENCE = Pattern.compile(
+            "&(?:#(?:x([0-9a-f]{1,8})|([0-9]{1,10}))|(amp)|(commat)(?=;));?", Pattern.CASE_INSENSITIVE);
+
+    /** More rounds than any real text needs; a body still changing after them is refused rather than guessed at. */
+    private static final int MAX_DECODING_ROUNDS = 8;
 
     private GitLabArguments() {
     }
@@ -133,10 +147,58 @@ final class GitLabArguments {
             throw new InvalidToolArgumentException("body must not contain a line starting with '/': GitLab would "
                     + "run it as a quick action");
         }
-        if (MENTION_ALL.matcher(body).find()) {
+        if (MENTION_ALL.matcher(body).find() || MENTION_ALL.matcher(decodedCharacterReferences(body)).find()) {
             throw new InvalidToolArgumentException("body must not mention @all: it notifies every member of the project");
         }
         return body;
+    }
+
+    /**
+     * The text as a Markdown renderer shows it: GitLab renders a note with CommonMark, which turns {@code &#64;all}
+     * into a plain {@code @all}, and mentions are then found in the rendered text, so {@code &#64;all},
+     * {@code &#x40;all}, {@code &commat;all} and {@code @&#97;ll} all notify the project. Decoding is repeated until
+     * nothing changes, so {@code &amp;#64;all} is refused too. CommonMark decodes once and would show that one
+     * literally, but a later consumer of the rendered HTML (a mail, a client) may decode again, and a literal
+     * {@code &#64;all} in a review comment has no legitimate use. A body that does not settle within
+     * {@link #MAX_DECODING_ROUNDS} is ambiguous and is refused (fail-closed).
+     */
+    static String decodedCharacterReferences(String text) {
+        String current = text;
+        for (int round = 0; round < MAX_DECODING_ROUNDS; round++) {
+            String next = decodeOnce(current);
+            if (next.equals(current)) {
+                return current;
+            }
+            current = next;
+        }
+        throw new InvalidToolArgumentException("body must not nest character references: it cannot be checked "
+                + "for a mention of @all");
+    }
+
+    private static String decodeOnce(String text) {
+        Matcher matcher = CHARACTER_REFERENCE.matcher(text);
+        StringBuilder out = new StringBuilder();
+        while (matcher.find()) {
+            String decoded;
+            if (matcher.group(3) != null) {
+                decoded = "&";
+            } else if (matcher.group(4) != null) {
+                decoded = "@";
+            } else {
+                decoded = codePointOf(matcher.group(1) != null ? matcher.group(1) : matcher.group(2),
+                        matcher.group(1) != null ? 16 : 10);
+            }
+            matcher.appendReplacement(out, Matcher.quoteReplacement(decoded));
+        }
+        matcher.appendTail(out);
+        return out.toString();
+    }
+
+    private static String codePointOf(String digits, int radix) {
+        long value = Long.parseLong(digits, radix);
+        return Character.isValidCodePoint((int) Math.min(value, Integer.MAX_VALUE)) && value > 0
+                ? Character.toString((int) value)
+                : "\uFFFD";
     }
 
     private static boolean hasControlCharacter(String text) {

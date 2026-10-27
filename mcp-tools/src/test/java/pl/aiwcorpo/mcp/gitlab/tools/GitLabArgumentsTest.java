@@ -92,6 +92,25 @@ class GitLabArgumentsTest {
         }
     }
 
+    @Test
+    void commentBodyCannotMentionEveryoneThroughCharacterReferences() {
+        String[] bad = {"&#64;all pilne", "&#x40;all", "&#X40;ALL", "&commat;all", "&COMMAT;all", "@&#97;ll", "@a&#108;l",
+                "@&#x61;&#x6C;&#108;", "&#0064;all", "&#64all", "@&#97ll", "&amp;#64;all", "&amp;amp;#x40;all",
+                "&ampcommat;all", "&amp;&amp;#35;&amp;#54;&amp;#52;all", "x\n&#64;all.", "(&commat;all)"};
+        for (String body : bad) {
+            assertThatThrownBy(() -> GitLabArguments.commentBody(body)).as(body).isInstanceOf(InvalidToolArgumentException.class);
+        }
+        // "&#x40all" is not a mention: a hex reference without semicolon takes every hex digit, so it is U+040A + "ll".
+        String[] ok = {"a&#64;all.internal", "Tom &amp; Jerry", "&lt;b&gt; &#64; at", "&#64;alligator", "&commat;anowak",
+                "price &#8364;5", "&#99999999999;", "&#0;all", "&unknown;all", "&#x40all"};
+        for (String body : ok) {
+            assertThatCode(() -> GitLabArguments.commentBody(body)).as(body).doesNotThrowAnyException();
+        }
+        String nested = "&" + "amp;".repeat(9) + "#64;all";
+        assertThatThrownBy(() -> GitLabArguments.commentBody(nested)).isInstanceOf(InvalidToolArgumentException.class)
+                .hasMessageContaining("nest");
+    }
+
     private static void checkVectors(String resource, UnaryOperator<String> check) throws IOException {
         JsonNode vectors = read(resource);
         assertThat(vectors.path("valid").size()).isPositive();
