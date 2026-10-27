@@ -1,9 +1,35 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
-M1: osiągnięty (2026-10-27) - serwer z template'u na starterze 3.0.0-alpha-5, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE) z walidacją wg wzorców kontraktu, ścieżki rozwiązywane do id przez API v4, 49 testów na `StubBackend`, start produkcyjny po mTLS sprawdzony na hoście.
+M1: osiągnięty (2026-10-27, runda 2) - serwer z template'u na starterze 3.0.0-alpha-6, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 67 testów na `StubBackend`, start w profilu `dev` i po mTLS sprawdzony na hoście.
 
-Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-5` (kontrakty 2.0.2, Spring Boot 4.1.0, Spring AI
+Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-6` (kontrakty 2.0.2, Spring Boot 4.1.0, Spring AI
 2.0.0, Java 25). M2 nie jest zaczęty (manifest C6, `@ResourceRef`, `ResultFilter`).
+
+## Runda 2: znaleziska recenzji M1
+
+| Znalezisko | Status |
+| --- | --- |
+| Wspólne 0 (alpha-5 wydane ponownie, serwer nie startował) | zrobione: BOM alpha-6, usunięty własny `@Primary McpSyncServerCustomizer` (`toolInputsCheckedByTheTools`) |
+| Wspólne 1 (walidacja w starterze, nie w SDK) | zrobione: usunięty `StrictArgumentsToolCallback`; testy oczekują C10 `invalid_argument`; test, że nazwa nieznanego argumentu nie trafia do wyniku ani logu |
+| Wspólne 2 (limity w `inputSchema`) | zrobione: `@ArgumentLimits` i `SchemaLimitedToolCallbacks.of(...)` ze startera, własna kopia usunięta; `contractPattern` dla `GitLabGroupPath`/`GitLabProjectPath`, test: wzorzec w schemacie = wzorzec kontraktu |
+| Wspólne 4 (fabryka klienta: https, limit rozmiaru, 3xx) | zrobione lokalnie w adapterze (jak template) |
+| Wspólne 5 (kształt oznaczenia treści) | zastosowane CC-072 (patrz G-M1) |
+| Wspólne 3 (logi aplikacji i audyt w jednym stdout) | ws-03; serwer nie loguje nazw argumentów ani wartości |
+| Wspólne 6 (kod błędu dla zasobu poza zakresem) | kategoria (b), bez zmian: gitlab zwraca `not_found_or_denied`; decyzja w C10/C7 |
+| G-M1 tekst użytkowników poza `untrusted-data` | zrobione: tytuł MR, nazwy projektów, etykiety, gałęzie (w tym domyślna), nazwy użytkowników, opisy, treść pliku jako `{kind, format, origin, text, truncated}`; `format` `text/plain` albo `text/markdown`; testy na wstrzykniętych tytule i etykiecie |
+| G-M2 `http://` poza `dev` | zrobione: `https` albo jawne `MCP_GITLAB_ALLOW_PLAIN_HTTP=true` (ostrzeżenie w logu); `ProductionConfigurationTest` |
+| G-L1 brak limitu rozmiaru odpowiedzi | zrobione: `BoundedBodyInterceptor`, `max-response-size` 1 MB; start odmawia, gdy `MCP_GITLAB_FILE_MAX_BYTES` je przekracza |
+| G-L2 wzmianki i obrazki w komentarzu | częściowo: odrzucane `@all` (po dowolnym znaku niebędącym znakiem słowa, bez względu na wielkość liter). Nie robione: wzmianki grup i użytkowników (nie do odróżnienia od zwykłego tekstu) oraz obrazki z obcych hostów; to decyzja polityki (potwierdzenie `comment_merge_request` w gateway'u, C11) |
+| G-L3 liczba spoza `long` daje `internal_error` | zrobione: schemat startera (`maximum`) odrzuca ją jako `invalid_argument`, test z 10^29 |
+| G-L4 własny `@Primary` customizer | zrobione (usunięty); starter pilnuje jednego customizera |
+
+Zmiany z template'u od 7f65f8f: `BackendResponseException` bez treści, 3xx jako błąd, limit odpowiedzi,
+`ProductionConfigurationTest`, `DevProfileLoopbackTest`, `BackendResponseTest` (nieczytelna odpowiedź,
+przekierowanie, timeout, odpowiedź ponad limit), sekcje README o uruchomieniu lokalnym i z `mcp-platform-dev`,
+`prometheus` niewystawiony, sandbox systemd, `install.sh`, `TRIAL_SYSTEM`/`contractSystemIsKnown`.
+
+Nie przeniesione, bo poza zakresem: `outputSchema` dla narzędzi (zalecenie CC-072, objęcie kształtu
+`definitionHash`; Spring AI `@Tool` go nie generuje, do ustalenia ze starterem w M2).
 
 ## Co działa
 
@@ -38,19 +64,19 @@ Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-5` (kontrakty 2.0.2, 
 - Błędy: 404 i 403 -> ten sam `not_found_or_denied`; brak poświadczenia i 401 -> `credential_required`;
   obejście `defaultStatusHandler` z template'u zostaje (treść błędu GitLaba nie trafia do wyniku ani logu,
   test z odpowiedzią 500 z echem tokenu).
-- Schemat wejścia: `additionalProperties: false` (Spring AI) oraz `maxLength`/`minLength`/`minimum`/`maximum` z
-  adnotacji `@ArgumentLimits` (Spring AI ich nie generuje; tekst bez `maxLength` zatrzymuje start).
-  Walidacja schematu w MCP SDK jest wyłączona, bo odpowiadała przed starterem tekstem spoza C10 i bez audytu;
-  nieznane argumenty i złe typy JSON odrzuca `StrictArgumentsToolCallback` (`invalid_argument`, z audytem).
-- Testy (`./mvnw verify`, JDK 25, bez Dockera): 49, 0 błędów.
+- Schemat wejścia: `additionalProperties: false`, `maxLength`/`minLength`/`pattern`/`minimum`/`maximum` z
+  `@ArgumentLimits` i `SchemaLimitedToolCallbacks` startera (tekst bez `maxLength` zatrzymuje start). Starter
+  sprawdza każde wywołanie wobec schematu: `invalid_argument` (C10) ze zdarzeniem C8, bez wartości i bez nazw
+  spoza schematu. `GitLabArguments` zostaje drugą linią (wzorce czytane z kontraktu) i dokłada reguły spoza
+  schematu.
+- Testy (`./mvnw verify`, JDK 25, bez Dockera): 67, 0 błędów (mcp-application 9, mcp-tools 8, mcp-app 50).
   - mcp-app 33: `ListProjectsToolTest` 5, `GetFileToolTest` 7, `GetMergeRequestToolTest` 5,
     `CommentMergeRequestToolTest` 5, `ToolSurfaceAndCredentialTest` 8, `GatewayOnlyAccessTest` 3 (bez zmian
     poza nazwą narzędzia). Każde narzędzie: pozytywny, `credential_required` (brak i 401),
     `not_found_or_denied` (404 i 403), `invalid_argument` (każdy identyfikator).
   - mcp-tools 7 (`GitLabArgumentsTest`), mcp-application 9 (`GitLabServiceTest`).
-- Smoke na hoście (port 18520, certyfikat `certs/mcp-gitlab`, użytkownik Redis `mcp-gitlab`): start,
-  `/actuator/health` po mTLS z certyfikatem gateway'a 200, `POST /mcp` bez JWT 401, bez certyfikatu klienta
-  handshake zerwany. Proces zatrzymany.
+- Smoke na hoście (port 18520, profil `dev` wg README): health 200, `POST /mcp` bez JWT 401; proces zatrzymany.
+  Wariant mTLS (certyfikat `certs/mcp-gitlab`, Redis `mcp-gitlab`) sprawdzony w rundzie 1 na alpha-5.
 
 ## Miejsce na QueryScope i ResultFilter (M3)
 
@@ -73,8 +99,6 @@ grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w 
 - Testy na `StubBackend` w repo zamiast mocka z ws-01 (mocka GitLaba nie ma). Odpowiedzi wzorowane na
   dokumentacji API v4 (GitLab 17): `groups`, `projects`, `repository/files` (HEAD z `X-Gitlab-*`, `/raw`),
   `merge_requests`, `notes`; nie były porównane z działającym GitLabem.
-- Własny `McpSyncServerCustomizer` zastępuje domyślny Spring AI (Spring AI przyjmuje dokładnie jeden), więc
-  powtarza jego `immediateExecution(true)`; testy narzędzi sprawdzają, że poświadczenie dociera do GitLaba.
 
 ## Czego potrzebuje ws-01
 
@@ -89,27 +113,16 @@ grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w 
 
 ## Czego potrzebuje ws-02 (starter)
 
-1. MCP SDK 2.0 waliduje argumenty względem `inputSchema` przed `AuditingToolCallback`: klient dostaje tekst
-   `Tool (...) input validation failed: ...` (nie C10), a wywołanie nie ma zdarzenia audytu. Dotyczy każdego
-   serwera z template'u (np. brak wymaganego argumentu). Propozycja: starter ustawia
-   `validateToolInputs(false)` razem z `immediateExecution(true)` i sam odrzuca nieznane argumenty/złe typy
-   z kodem `invalid_argument`. Obejście lokalne: `McpToolsConfiguration` + `StrictArgumentsToolCallback`.
-2. Spring AI przyjmuje tylko jeden `McpSyncServerCustomizer` (`Optional`), więc własny customizer serwera wyłącza
-   domyślny `immediateExecution(true)`. Starter mógłby wystawić własny punkt rozszerzenia albo sprawdzać przy
-   starcie, że narzędzie wykonuje się na wątku żądania.
-3. Limity długości w `inputSchema`: Spring AI nie generuje `maxLength`/`minimum`; adnotacja w rodzaju
-   `@ArgumentLimits` i sprawdzenie przy starcie przydałyby się wszystkim serwerom.
-4. `TestGateway.asGateway` zawsze wysyła `X-MCP-Credential-Type: user-secret`; serwer GitLaba testuje
-   `user-oauth` własnym customizerem. Propozycja: przeciążenie z typem.
-5. BOM nie zarządza `mcp-cedar-entities` (`ResourceIds`), więc wzorce GitLaba są skopiowane do
-   `GitLabArguments` (test porównuje je z `common.schema.json`).
+- Wzorce z `common.schema.json` dla `GitLabArguments` czytam z zasobu kontraktu przy starcie klasy; helper w
+  starterze (np. `ContractPatterns.of("GitLabProjectPath")`) usunąłby tę kopię kodu u pięciu serwerów.
+- Zalecenie CC-072 (`outputSchema` z kształtem `UntrustedText`): potrzebny sposób deklaracji w
+  `SchemaLimitedToolCallbacks`, bo `@Tool` nie generuje `outputSchema`.
 
 ## Czego potrzebuje ws-03 (template)
 
-- Te same obejścia co wyżej (wyłączona walidacja SDK, `ArgumentLimits`, ścisłe argumenty) warto przenieść do
-  template'u albo startera, żeby pięć serwerów nie miało pięciu kopii.
 - `docs/nowy-serwer.md` mówi o GitLabie tylko `PRIVATE-TOKEN` przez `credential.value()`; dla `user-oauth`
   GitLab chce `Authorization: Bearer` (`credential::applyTo`).
+- Logi aplikacji i audyt w jednym stdout bez escapowania (wspólne 3 z recenzji).
 
 ## Czego potrzebuje ws-05 (gateway)
 
@@ -118,4 +131,5 @@ grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w 
 
 ## Propozycje zmian kontraktu
 
-Brak w M1.
+Brak. Kształt `UntrustedText` (CC-072) zastosowany bez zmiany zależności od kontraktów; wzorzec `origin` jako pole
+systemowe obok czterech wymaganych jest zgodny z `additionalProperties: true` definicji.
