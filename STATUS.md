@@ -1,8 +1,8 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
-M1: osiągnięty (2026-10-27, runda 2) - serwer z template'u na starterze 3.0.0-alpha-6, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 67 testów na `StubBackend`, start w profilu `dev` i po mTLS sprawdzony na hoście.
+M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 76 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
 
-Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-6` (kontrakty 2.0.2, Spring Boot 4.1.0, Spring AI
+Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-10` (kontrakty 2.1.1, Spring Boot 4.1.0, Spring AI
 2.0.0, Java 25). M2 nie jest zaczęty (manifest C6, `@ResourceRef`, `ResultFilter`).
 
 ## Runda 2: znaleziska recenzji M1
@@ -31,8 +31,29 @@ Zmiany z template'u od 7f65f8f: `BackendResponseException` bez treści, 3xx jako
 przekierowanie, timeout, odpowiedź ponad limit), sekcje README o uruchomieniu lokalnym i z `mcp-platform-dev`,
 `prometheus` niewystawiony, sandbox systemd, `install.sh`, `TRIAL_SYSTEM`/`contractSystemIsKnown`.
 
-Nie przeniesione, bo poza zakresem: `outputSchema` dla narzędzi (zalecenie CC-072, objęcie kształtu
-`definitionHash`; Spring AI `@Tool` go nie generuje, do ustalenia ze starterem w M2).
+
+## Migracja na starter 3.0.0-alpha-10 (2026-10-28)
+
+BOM alpha-6 -> alpha-10 (kontrakty 2.1.1). Źródło: `MIGRATION-3.0.md`, sekcje alpha-7 do alpha-10. M2 nie jest
+zaczęty.
+
+| Punkt migracji | Status |
+| --- | --- |
+| Limity na każdym poziomie schematu (S-M1) | bez zmian w kodzie: wszystkie argumenty już miały `@ArgumentLimits` (liczby z `minimum` i `maximum`, teksty z `maxLength`, wzorce `contractPattern` z kotwicami); brak list, map i `Object` |
+| Wynik jako rekordy z `UntrustedText` startera | zrobione: własny rekord `UntrustedText` (z `origin`) usunięty, `mcp-core` zależy od `mcp-platform-starter` tylko dla tego typu; `origin` znika z wyniku (typ ma cztery pola) |
+| `@Nullable` na polach wyniku, które system może zostawić puste | zrobione: `ProjectSummary` (nazwa, opis, gałąź, aktywność, adres), `MergeRequest` (wszystko poza `project`, `iid`, flagami i listami), `MergeRequestNote` (autor, czas). Test `aMergeRequestWithEmptyOptionalFieldsIsReturnedWithNulls` |
+| Bez `@JsonProperty`/`@JsonIgnore` na komponentach wyniku | było czyste; adnotacje zostają tylko w prywatnych odpowiedziach GitLaba w adapterze |
+| Kolejność: konwersja, `normalize`, `cut`, filtr, `plainCut`/`markdownCut` | zrobione w `SystemText` (jedno miejsce dla tekstu z GitLaba); GitLab nie ma filtra ani konwersji, więc tekst wychodzi bez zmiany treści. Test: `textIsNormalizedBeforeItLeavesTheServer`, w logach testów brak `untrusted_text_not_normalized` |
+| Spójna obsługa treści w trzech serwerach (wspólne 1 z rundy 2) | gitlab: surowy tekst bez escapowania i bez usuwania znaczników, klient nie renderuje go jako HTML; opisane w README i `docs/api/tools-catalog.md` |
+| Blokada `@all` i quick actions po normalizacji | `commentBody` normalizuje treść (`TextHygiene.normalize`), sprawdza znormalizowaną i tę wysyła; znaki, które starter odrzuca w tekście, odrzuca także tu (`firstProblem`). Warianty z `GitLabArgumentsTest` dalej łapane; nowe: `\u200D/merge`, `@all\u200D`, `cc\u200C@all`, `x\r\n/close`; `@a\u200Cll` przechodzi jako `@a ll` |
+| `tool_failed` domenowe na INFO | zrobione: nie było testów oczekujących ERROR; dodany `ToolFailureLogLevelTest` (not_found_or_denied i invalid_argument -> INFO) |
+| `dev` poza `.env`, compose, systemd i obrazem; obejścia w `application-dev.yml` | w repo nie było `SPRING_PROFILES_ACTIVE=dev` poza poleceniem uruchomienia w README (zostaje); z `application-dev.yml` usunięte `replay-store: memory` i `mtls.required: false` (ssl i jwks-ssl-bundle nie były ustawione); `dev_profile_overrides` w logu ma `overridden=[]` |
+| Własne beany polityki i audytu | brak (sprawdzone grepem po `ToolInputPolicy`, `ToolCallbackAuditPostProcessor`, `RegisteredToolsCheck`, `ToolHintsPostProcessor`, `PlatformConfigurationGuard`, `InternalJwt*`) |
+| Claimy `vs` i `vsc:{}` z gateway'a M2 | zaakceptowane: `GatewayLinkClaimsTest` (wywołanie z `virtualServer("team-a-review", Map.of())` przechodzi); zawężenia linku nie są egzekwowane (M2) |
+| Zgodność z mockiem GitLaba (ws-01) | mocka GitLaba w `mcp-platform-dev` nie sprawdzano (STATUS ws-01 go nie obiecuje); `StubBackend` bez zmian w kształtach odpowiedzi |
+
+Weryfikacja: `./mvnw -B clean verify` (JDK 25) -> 76 testów, 0 błędów (mcp-app 57, mcp-tools 10, mcp-application 9).
+Uruchomienie wg README: profil `dev` na 18520, health 200, `POST /mcp` bez JWT 401; proces zatrzymany.
 
 ## Co działa
 
@@ -60,7 +81,7 @@ Nie przeniesione, bo poza zakresem: `outputSchema` dla narzędzi (zalecenie CC-0
   `invalid_argument` bez treści.
 - `comment_merge_request`: linie zaczynające się od `/` są odrzucane, bo GitLab wykonałby je jako quick actions
   (`/merge`, `/approve`, `/assign`), czyli inną akcję niż komentarz; treść 1-10000 znaków.
-- Treść z GitLaba (plik, opisy) w wyniku jako `{kind: "untrusted-data", origin, text, truncated}`.
+- Treść z GitLaba (plik, opisy) w wyniku jako `UntrustedText` startera `{kind, format, text, truncated}`.
 - Poświadczenie wg `X-MCP-Credential-Type`: `user-secret` (schemat `Bearer` albo `Token`) -> `PRIVATE-TOKEN`;
   `user-oauth` i `token-exchange` (`Bearer`) -> `Authorization: Bearer`; inne -> `internal_error` bez
   wywołania GitLaba.
@@ -118,8 +139,7 @@ grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w 
 
 - Wzorce z `common.schema.json` dla `GitLabArguments` czytam z zasobu kontraktu przy starcie klasy; helper w
   starterze (np. `ContractPatterns.of("GitLabProjectPath")`) usunąłby tę kopię kodu u pięciu serwerów.
-- Zalecenie CC-072 (`outputSchema` z kształtem `UntrustedText`): potrzebny sposób deklaracji w
-  `SchemaLimitedToolCallbacks`, bo `@Tool` nie generuje `outputSchema`.
+- Zalecenie CC-072 (`outputSchema`) spełnia od alpha-7 sam starter; nic do zrobienia.
 
 ## Czego potrzebuje ws-03 (template)
 
@@ -134,5 +154,4 @@ grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w 
 
 ## Propozycje zmian kontraktu
 
-Brak. Kształt `UntrustedText` (CC-072) zastosowany bez zmiany zależności od kontraktów; wzorzec `origin` jako pole
-systemowe obok czterech wymaganych jest zgodny z `additionalProperties: true` definicji.
+Brak. Kształt `UntrustedText` (CC-072) to od alpha-7 typ startera; pole `origin` zniknęło z wyniku (typ ma cztery pola).

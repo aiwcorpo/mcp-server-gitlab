@@ -15,10 +15,10 @@ Zasoby C7 (do `@ResourceRef` ze starterem beta, M3): `group` -> `GitLab::Group`,
 Identyfikator i rodzic zasobu to `full_path`/`path_with_namespace` zwrócone przez GitLaba, nigdy argument.
 
 Wyniki: tekst pisany przez użytkowników GitLaba jest obiektem `UntrustedText` (CC-072):
-`{kind: "untrusted-data", format: "text/plain" | "text/markdown", origin, text, truncated}`. `origin` to
-`gitlab-file-content`, `gitlab-project-name`, `gitlab-project-description`, `gitlab-branch`,
-`gitlab-merge-request-title`, `gitlab-merge-request-description`, `gitlab-label` albo `gitlab-username`.
-Pola `name`, `description`, `defaultBranch` (projekt) oraz `title`, `description`, `sourceBranch`,
+`{kind: "untrusted-data", format: "text/plain" | "text/markdown", text, truncated}`; typ ma tylko te cztery
+pola, więc rodzaj treści wynika z nazwy pola wyniku. Tekst jest normalizowany (`TextHygiene.normalize`: znaki
+niewidoczne i sterujące zastępuje spacja), cięty do limitu i oddawany bez dalszych zmian. Pola, które GitLab
+może zostawić puste, są `@Nullable` w schemacie wyniku. Pola `name`, `description`, `defaultBranch` (projekt) oraz `title`, `description`, `sourceBranch`,
 `targetBranch`, `author`, `assignees[]`, `reviewers[]`, `labels[]` (merge request) i `content` (plik) mają ten
 kształt; pozostałe to pola systemu.
 

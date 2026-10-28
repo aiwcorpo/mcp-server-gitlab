@@ -49,7 +49,7 @@ tryb ASYNC.
   pokazuje ścieżkę kanoniczną. Porównanie napisów myliłoby wielkość liter i przeniesione projekty.
 - `get_file`: HEAD przed pobraniem (rozmiar), treść przy commicie z HEAD; plik binarny (NUL albo niepoprawny
   UTF-8) i za duży nie są zwracane.
-- Argumenty sprawdza starter wobec `inputSchema` (od 3.0.0-alpha-6; walidacja MCP SDK jest wyłączona, serwer nie
+- Argumenty sprawdza starter wobec `inputSchema` (od 3.0.0-alpha-6, bez zmian do alpha-10; walidacja MCP SDK jest wyłączona, serwer nie
   ma własnego customizera): błędy są w C10 i audytowane. Schemat buduje `SchemaLimitedToolCallbacks`
   z `@ArgumentLimits`; wzorce ścieżek to `contractPattern`, nie kopie.
 - Adapter: `https` poza `dev`, limit rozmiaru odpowiedzi, 3xx jako błąd, `BackendResponseException` bez treści.

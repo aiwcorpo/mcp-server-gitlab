@@ -1,7 +1,7 @@
 # mcp-gitlab: serwer MCP platformy dla GitLaba
 
-Serwer MCP dla GitLaba (REST API v4), zbudowany na `mcp-platform-starter` 3.0.0-alpha-6 (Java 25, Spring Boot
-4.1.0, Spring AI 2.0.0, kontrakty `mcp-contracts` 2.0.2). Stoi wyłącznie za gateway'em platformy: przyjmuje
+Serwer MCP dla GitLaba (REST API v4), zbudowany na `mcp-platform-starter` 3.0.0-alpha-10 (Java 25, Spring Boot
+4.1.0, Spring AI 2.0.0, kontrakty `mcp-contracts` 2.1.1). Stoi wyłącznie za gateway'em platformy: przyjmuje
 ruch tylko po mTLS z wewnętrznym JWT gateway'a (C2), a do GitLaba woła z poświadczeniem użytkownika, które
 gateway dołącza do każdego żądania (C3). Bez poprawnego JWT odpowiada 401, nie ma trybu anonimowego.
 
@@ -52,8 +52,12 @@ Wspólne dla wszystkich narzędzi:
   używają id, a wynik pokazuje ścieżkę kanoniczną. Serwer nie porównuje ścieżek jako napisów: GitLab jest
   nieczuły na wielkość liter i prowadzi starą ścieżkę przeniesionego projektu do nowej.
 - Tekst pisany przez użytkowników GitLaba jest w wyniku obiektem `UntrustedText` z kontraktu (CC-072):
-  `{kind: "untrusted-data", format: "text/plain" | "text/markdown", origin, text, truncated}`. Dotyczy treści
-  pliku, opisów (markdown), tytułu merge requestu, nazw projektów, etykiet, gałęzi i nazw użytkowników. Limity:
+  `{kind: "untrusted-data", format: "text/plain" | "text/markdown", text, truncated}` (typ
+  `pl.aiwcorpo.mcp.platform.text.UntrustedText` startera; narzędzia publikują `outputSchema`). Dotyczy treści
+  pliku, opisów (markdown), tytułu merge requestu, nazw projektów, etykiet, gałęzi i nazw użytkowników. Tekst
+  wychodzi bez zmiany treści (markdown zostaje markdownem, `<script>` z opisu zostaje tekstem, klient nie
+  renderuje go jako HTML); kolejność: `TextHygiene.normalize`, cięcie do limitu, fabryka `plainCut`|`markdownCut`. Pole, które
+  GitLab może zostawić puste (opis, autor, `mergedAt`, status scalania, adres), bywa `null`. Limity:
   tytuł 1000, nazwa, etykieta, gałąź i użytkownik 255, opis projektu 2000, opis merge requestu 20000 znaków.
   Stany, flagi, znaczniki czasu, ścieżki kanoniczne i adresy URL to pola systemu, nie dane użytkownika.
 - Błędy: `not_found_or_denied` (404 i 403 GitLaba, ten sam tekst), `credential_required` (brak poświadczenia
@@ -142,10 +146,14 @@ Wartości domyślne profilu są w `mcp-app/src/main/resources/application-dev.ym
 
 Ryzyko: `application-dev.yml` jest w jarze produkcyjnym, a profil `dev` przyjmuje JWT podpisane opublikowanymi
 kluczami testowymi kontraktów i nie wymaga certyfikatu klienta. Dlatego `dev` słucha wyłącznie na adresie pętli
-zwrotnej: starter (od 3.0.0-alpha-6) odmawia startu z `dev` przy innym `server.address`, a test
+zwrotnej: starter odmawia startu z `dev` przy innym `server.address`, a test
 `DevProfileLoopbackTest` pilnuje tego w serwerze. Nie ustawiaj `SERVER_ADDRESS` ani `MCP_BIND` przy `dev` i
 nigdy nie włączaj `dev` na hoście ani w kontenerze, do którego łączy się gateway: tam działa wyłącznie
 konfiguracja bazowa z mTLS.
+
+`SPRING_PROFILES_ACTIVE=dev` wolno ustawić tylko w poleceniu z terminala, jak wyżej. Nie trafia do `.env`, szablonów
+compose, jednostek systemd ani obrazu: od 3.0.0-alpha-9 starter nie startuje z `dev` w kontenerze, na Kubernetesie
+i pod systemd, a `application-dev.yml` nie ustawia już TLS, mTLS ani magazynu `jti` (robi to starter).
 
 ## Uruchomienie z mcp-platform-dev (mTLS)
 
