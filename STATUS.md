@@ -1,9 +1,12 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
+M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-2 (kontrakty 3.1.0), `@ToolTitle` na 4 narzędziach, `@ResourceRef` na `group` i `project`, resolvery `GitLab::Group` i `GitLab::Project` z `classification` i `attrs.ancestorClassifications` (cache na czas wywołania, `fetchAll` przy listach), `ResultFilter` na `list_projects`, `GET /mcp-manifest` zgodny z `tools/list`, 99 testów (mcp-app 82, mcp-tools 10, mcp-application 7). Nie sprawdzone na działającym GitLabie ani w mcp-platform-dev (patrz Propozycje CC 1).
+
 M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 78 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
 
-Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-11` (kontrakty 2.1.1, Spring Boot 4.1.0, Spring AI
-2.0.0, Java 25). M2 nie jest zaczęty (manifest C6, `@ResourceRef`, `ResultFilter`).
+Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-beta-2` (kontrakty 3.1.0, Spring Boot 4.1.0, Spring AI
+2.0.0, Java 25). Tag `v3.0.0-beta-3` nie istniał przy zamknięciu M3; przejście to podbicie `mcp-platform.version`
+w `pom.xml` i przejrzenie MIGRATION "Z beta-2 na beta-3".
 
 ## Runda 2: znaleziska recenzji M1
 
@@ -102,24 +105,33 @@ Uruchomienie wg README: profil `dev` na 18520, health 200, `POST /mcp` bez JWT 4
 - Smoke na hoście (port 18520, profil `dev` wg README): health 200, `POST /mcp` bez JWT 401; proces zatrzymany.
   Wariant mTLS (certyfikat `certs/mcp-gitlab`, Redis `mcp-gitlab`) sprawdzony w rundzie 1 na alpha-5.
 
-## Miejsce na QueryScope i ResultFilter (M3)
+## M3: zasoby, polityki, manifest
 
-Jedno miejsce: port `ProjectResultFilter` (`mcp-core`), wołany w `GitLabService.listProjects` po pobraniu
-listy i odrzuceniu obcych przestrzeni nazw. W M1 bean w `ApplicationWiringConfiguration` przepuszcza listę
-(decyzję o wywołaniu podejmuje gateway, uprawnienia GitLaba działają, bo wołamy jako użytkownik). Ze starterem
-beta: implementacja przez `ResultFilter.allowed` dla każdego projektu (`GitLab::Project`, rodzic `GitLab::Group`
-z `namespace.full_path`, `classification` z topics przodków) oraz `queryConstraint` dla `gitlabGroups` linku:
-grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w tym samym `listProjects`, przed
-`listGroupProjects`). Dla narzędzi z identyfikatorem (`get_file`, `get_merge_request`,
-`comment_merge_request`) `@ResourceRef` na `project` i resolver w `mcp-integration` z wyniku
-`GET /projects/:path`.
+Kamienie: (1) przejście na beta-2 (alpha-12..14 i beta-1 w jednym kroku: wersja BOM, tytuły, `policy.*` i `manifest.*`,
+higiena tekstu beta-1), (2) resolvery i `@ResourceRef`, (3) testy polityki i manifestu, (4) dokumentacja.
+
+| Punkt | Stan |
+| --- | --- |
+| Konfiguracja | `policy.main.*`, `policy.state-dir`, `manifest.*` w `application.yml` (zmienne `MCP_POLICY_*`, `MCP_INTERNAL_URL`); `dev`: paczka z `127.0.0.1:18747` i klucz testowy z `mcp-policies/keys/dev`, `allow-test-keys` tylko w `dev` (`ProductionConfigurationTest`) |
+| Higiena tekstu beta-1 | ZWNJ/ZWJ/LRM/RLM i CRLF zostają w treści komentarza; kontrole quick action i `@all` robione na tekście z nimi i bez nich (fail-closed); `body` ma `mentionFiltered = true`. Zmienione testy: `@a<ZWNJ>ll` jest teraz odrzucane, CRLF idzie do GitLaba bez zmian |
+| Zasoby | `GitLab::Group` (`list_projects`) i `GitLab::Project` (reszta); merge request nie jest typem zasobu kontraktu, jest adresowany przez projekt i `iid` |
+| Atrybuty | `classification` z `topics`; `ancestorClassifications` dokładnie dla grup nad zasobem (projekt: z rodzicem; rodzic projektu: bez siebie; grupa najwyższego poziomu `{}`); `AncestorLookup`, `GitLabGroupResolver`, `GitLabProjectResolver` |
+| Cache na wywołanie | `CallCache` w adapterze, klucz: `ResourceContext` wywołania (WeakHashMap), wielkość liter pomijana; obejmuje `findGroup` i stronę projektów grupy |
+| Listy | `ProjectSummary.path` jest `@ResourceRef`; `fetchAll` bierze projekty ze strony grupy (1 wywołanie na grupę), awaryjnie `GET /projects/:path` |
+| Wyszukiwanie | `list_projects(group)`: zakres to `@ResourceRef` grupy (link zawęża przez politykę), zapytanie buduje serwer (id grupy, stałe parametry); `StructuredQuery`/`QueryScope` nie są użyte, bo GitLab nie ma języka zapytań w tym narzędziu |
+| Manifest | `ManifestTest`: reguły bramy, definicje = `tools/list`, `definitionHash`, `resourceRefs`, ryzyko |
+| Usunięte | port `ProjectResultFilter` (zastąpiony przez filtr startera) |
+
+Uruchomienie z mcp-platform-dev nie było sprawdzane: mock GitLaba (`mocks/systems/gitlab_rest.py`) nie zwraca
+`topics`, więc klasyfikacja w nim jest pusta.
 
 ## Odstępstwa od briefu
 
 - `ref` w `get_file` opcjonalny (domyślna gałąź projektu); brief podaje `get_file(project, path, ref)`.
 - `list_projects` zwraca pierwszą stronę (100, po ścieżce) z flagą `truncated`, bez stronicowania i bez
   podgrup; parametr strony można dodać w M2 (zmienia `definitionHash`).
-- Brak `@ResourceRef`, `QueryScope`, `ResultFilter`, manifestu C6 (definicja M1 koordynatora).
+- M3: `QueryScope` nie jest używany (patrz tabela M3). `list_projects` bez `search`: model podaje tylko grupę.
+- Projekty w wyniku `list_projects` filtruje starter, więc przy `truncated: true` strona może mieć mniej niż 100 elementów.
 - Testy na `StubBackend` w repo zamiast mocka z ws-01 (mocka GitLaba nie ma). Odpowiedzi wzorowane na
   dokumentacji API v4 (GitLab 17): `groups`, `projects`, `repository/files` (HEAD z `X-Gitlab-*`, `/raw`),
   `merge_requests`, `notes`; nie były porównane z działającym GitLabem.
@@ -152,16 +164,24 @@ grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w 
 - Dla `gitlab` gateway musi przekazywać `X-MCP-Credential-Type` zgodny z połączeniem (`user-secret` dla PAT,
   `user-oauth` dla OAuth) i schemat `Bearer` (albo `Token` dla PAT); inne kombinacje serwer odrzuca.
 
-## Propozycje zmian kontraktu
+## Propozycje CC
 
-Brak. Kształt `UntrustedText` (CC-072) to od alpha-7 typ startera; pole `origin` zniknęło z wyniku (typ ma cztery pola).
+1. Źródło klasyfikacji grupy GitLaba (C7, CC-129). API v4 GitLaba nie ma `topics` dla grup (są tylko dla projektów),
+   a kontrakt zakłada "topics grupy". Serwer czyta pole `topics` z odpowiedzi `GET /groups/:id`, jeśli jest, a brak
+   traktuje jako brak klasyfikacji. Na prawdziwym GitLabie `restricted` na grupie nie zadziała, dopóki kontrakt nie
+   wskaże źródła: np. etykieta w opisie grupy, atrybut własny grupy (wymaga admina), albo konwencja nazwy. Do decyzji
+   człowieka. Dotyczy też mocka ws-01: potrzebuje `topics` na grupach, żeby demo M3 pokazało zamknięcie poddrzewa.
+2. Niewidoczny przodek (C7). Użytkownik będący tylko członkiem podgrupy może nie widzieć grupy nadrzędnej (404/403).
+   Serwer traktuje wtedy zasób jak nieistniejący, bo nie zna topics ukrytej grupy. Alternatywa wymaga konta serwisowego
+   do odczytu topics przodków (poza modelem poświadczeń użytkownika); do rozstrzygnięcia.
+3. Brak innych zmian kontraktu. Kształt `UntrustedText` (CC-072) to od alpha-7 typ startera; pole `origin` zniknęło z wyniku.
 
 ## Runda 4: poprawki przeglądu alpha-10 (2026-10-28)
 
 | Znalezisko | Status | Dowód |
 | --- | --- | --- |
 | G3-M1 `@all` w emfazie (`_@all_`, `__@all__`, `_&#64;all_`) | poprawione: lookbehind `(?<![A-Za-z0-9])` zamiast `\w`, ta sama zmiana we wzorcu za `@all` (`(?![A-Za-z0-9-])`), bo zamykający `_` też jest `\w`; odrzucane jest też `_@all` i `@all_x` (fałszywy alarm bez znaczenia w recenzji) | `GitLabArgumentsTest.commentBodyCannotMentionEveryone` |
-| G3-L1 brak testu, że do GitLaba idzie treść znormalizowana | poprawione | `CommentMergeRequestToolTest.gitLabReceivesTheNormalizedBodyNotTheOneTheModelSent` (CRLF -> LF w ciele POST) |
+| G3-L1 brak testu, że do GitLaba idzie treść znormalizowana | poprawione | `CommentMergeRequestToolTest.lineBreaksAreSentAsTheyCame` (dawniej `gitLabReceivesTheNormalizedBodyNotTheOneTheModelSent`) (CRLF -> LF w ciele POST) |
 | G3-L2 `get_file` gubi znaki bidi bez śladu | poprawione wariantem pola systemu: `hiddenCharactersRemoved` (liczba usuniętych znaków sterujących, niewidocznych i zmieniających kierunek, liczona na całym pliku przed cięciem); treść nadal oczyszczona, `truncated` bez zmian; opis w README i `tools-catalog.md`. Odrzucone: zamiana na widoczny znacznik (zmieniałaby kod, który model cytuje) | `GetFileToolTest.invisibleCharactersAreCountedBecauseTheyDisappearFromTheContent` |
 | A10-M1 `DevProfileLoopbackTest` | bez zmian, rozwiąże starter alpha-11 | |
 

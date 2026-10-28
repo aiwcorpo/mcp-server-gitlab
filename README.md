@@ -23,24 +23,27 @@ JWKS z kluczy testowych kontraktów i podpisuje wewnętrzne JWT, a `StubBackend`
 
 | Moduł | Co w nim jest | W tym serwerze |
 | --- | --- | --- |
-| `mcp-core` | domena i porty, czysta Java | `GitLabGroup`, `GitLabProject`, `ProjectList`, `RepositoryFile`, `MergeRequest`, `MergeRequestNote`, `UntrustedText`, `ResourceNotFoundException`, `FileNotReturnedException`; porty `GitLabUseCase`, `GitLabPort`, `ProjectResultFilter` |
+| `mcp-core` | domena i porty, czysta Java | `GitLabGroup`, `GitLabProject`, `ProjectList`, `RepositoryFile`, `MergeRequest`, `MergeRequestNote`, `UntrustedText`, `ResourceNotFoundException`, `FileNotReturnedException`; porty `GitLabUseCase`, `GitLabPort`; `AncestorTopics`, `GitLabGroupResource`, `GitLabProjectResource` (zasób z topics przodków) |
 | `mcp-application` | przypadki użycia (bez Springa) | `GitLabService`: ścieżka -> id przez GitLaba, dalej tylko id; limit i wykrywanie plików binarnych |
 | `mcp-integration` | adaptery wyjściowe do systemu | `GitLabRestAdapter` (API v4, kodowanie segmentów, timeouty, limit odpowiedzi, bez przekierowań, https poza `dev`), `BoundedBodyInterceptor`, `BackendResponseException`, `GitLabCredentials` (`PRIVATE-TOKEN` albo `Authorization: Bearer`), `GitLabBackendProperties` |
 | `mcp-tools` | narzędzia MCP, powierzchnia publiczna | `GitLabTools` (4 narzędzia), `GitLabArguments` (walidacja, druga linia za schematem), `GitLabToolErrors` (wyjątki domeny -> kody C10) |
 | `mcp-app` | bootstrap, wiring, jedyny jar, testy end-to-end | `McpToolsConfiguration` (lista narzędzi przez `SchemaLimitedToolCallbacks` ze startera), `ApplicationWiringConfiguration` |
 
 Zależności idą do środka: `mcp-tools` -> `mcp-application` -> `mcp-core` <- `mcp-integration`; `mcp-app` składa
-całość. Resolver zasobów (`@ResourceRef`, starter beta) dojdzie w `mcp-integration` obok adaptera, bo atrybuty
-zasobu (projekt, klasyfikacja) pochodzą z systemu.
+całość. Resolvery zasobów (`GitLabGroupResolver`, `GitLabProjectResolver`, `AncestorLookup`) są w `mcp-integration`
+obok adaptera, bo atrybuty zasobu (ścieżka kanoniczna, topics) pochodzą z systemu.
 
 ## Narzędzia
 
-| Narzędzie | Ryzyko | Uprawnienie (C9) | Poświadczenie | Argumenty | Wynik |
-| --- | --- | --- | --- | --- | --- |
-| `list_projects` | `READ_ONLY` | `mcp-gitlab-read` | `user-oauth` albo `user-secret` | `group`: ścieżka grupy wg `GitLabGroupPath` z kontraktu, maks. 1024 | `{group, projects[{path, name*, description*, defaultBranch*, archived, lastActivityAt, webUrl}], truncated}` (pola z `*` to `untrusted-data`, patrz niżej); projekty bezpośrednio w grupie, bez udostępnionych z innych przestrzeni, maks. 100 |
-| `get_file` | `READ_ONLY` | `mcp-gitlab-read` | jw. | `project`: `GitLabProjectPath`; `path`: 1-1024, względna, bez `..`, `.`, pustych segmentów, `\`, `%`, znaków sterujących; `ref` (opcjonalny): gałąź, tag albo SHA, maks. 255 | `{project, path, ref, commitId, size, hiddenCharactersRemoved, content}` (`hiddenCharactersRemoved`: ile znaków sterujących, niewidocznych i zmieniających kierunek tekstu usunęła normalizacja z treści pliku, liczone na całym pliku); plik binarny albo większy niż `MCP_GITLAB_FILE_MAX_BYTES` -> `invalid_argument` bez treści |
-| `get_merge_request` | `READ_ONLY` | `mcp-gitlab-read` | jw. | `project`; `iid`: 1..2147483647 | `{project, iid, title*, description*, state, draft, sourceBranch*, targetBranch*, author*, assignees*[], reviewers*[], labels*[], createdAt, updatedAt, mergedAt, detailedMergeStatus, hasConflicts, webUrl}` |
-| `comment_merge_request` | `UPDATE` | `mcp-gitlab-write` | jw. | `project`; `iid`; `body`: 1-10000 znaków, bez linii zaczynających się od `/` (quick actions GitLaba), bez `@all` (także zapisanego odwołaniem znakowym HTML) i znaków sterujących poza `\n`, `\r`, `\t` | `{project, mergeRequestIid, noteId, author, createdAt}` |
+| Narzędzie | Tytuł | Ryzyko | Akcja | Uprawnienie (C9) | Poświadczenie | Argumenty | Wynik |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `list_projects` | Lista projektów grupy | `READ_ONLY` | `read` | `mcp-gitlab-read` | `user-oauth` albo `user-secret` | `group`: ścieżka grupy wg `GitLabGroupPath` z kontraktu, maks. 1024 | `{group, projects[{path, name*, description*, defaultBranch*, archived, lastActivityAt, webUrl}], truncated}` (pola z `*` to `untrusted-data`, patrz niżej); projekty bezpośrednio w grupie, bez udostępnionych z innych przestrzeni, maks. 100 |
+| `get_file` | Pobierz plik z repozytorium | `READ_ONLY` | `read` | `mcp-gitlab-read` | jw. | `project`: `GitLabProjectPath`; `path`: 1-1024, względna, bez `..`, `.`, pustych segmentów, `\`, `%`, znaków sterujących; `ref` (opcjonalny): gałąź, tag albo SHA, maks. 255 | `{project, path, ref, commitId, size, hiddenCharactersRemoved, content}` (`hiddenCharactersRemoved`: ile znaków sterujących, niewidocznych i zmieniających kierunek tekstu usunęła normalizacja z treści pliku, liczone na całym pliku); plik binarny albo większy niż `MCP_GITLAB_FILE_MAX_BYTES` -> `invalid_argument` bez treści |
+| `get_merge_request` | Pobierz merge request | `READ_ONLY` | `read` | `mcp-gitlab-read` | jw. | `project`; `iid`: 1..2147483647 | `{project, iid, title*, description*, state, draft, sourceBranch*, targetBranch*, author*, assignees*[], reviewers*[], labels*[], createdAt, updatedAt, mergedAt, detailedMergeStatus, hasConflicts, webUrl}` |
+| `comment_merge_request` | Dodaj komentarz do merge requesta | `UPDATE` | `update` | `mcp-gitlab-write` | jw. | `project`; `iid`; `body`: 1-10000 znaków, bez linii zaczynających się od `/` (quick actions GitLaba), bez `@all` (także zapisanego odwołaniem znakowym HTML) i znaków sterujących poza `\n`, `\r`, `\t` | `{project, mergeRequestIid, noteId, author, createdAt}` |
+
+Argumenty `group` i `project` są `@ResourceRef` (typy `GitLab::Group` i `GitLab::Project`; merge request nie jest
+osobnym zasobem polityki, jest adresowany przez projekt i `iid`). Tytuł jest częścią `definitionHash`.
 
 Nazwa widziana przez klienta to `gitlab__<narzędzie>` (prefiks dokłada gateway, C5). Pełny opis:
 `docs/api/tools-catalog.md`.
@@ -69,6 +72,34 @@ Wspólne dla wszystkich narzędzi:
 Poświadczenie wg `X-MCP-Credential-Type`: `user-secret` (PAT, schemat `Bearer` albo `Token`) idzie w nagłówku
 `PRIVATE-TOKEN`; `user-oauth` i `token-exchange` (schemat `Bearer`) w `Authorization: Bearer`. Inne połączenia
 (`service-account`, `Basic`, `ApiKey`) kończą się `internal_error` bez wywołania GitLaba.
+
+## Zasoby i polityki (M3)
+
+Przed metodą narzędzia starter pyta GitLaba poświadczeniem użytkownika (`GitLabGroupResolver`,
+`GitLabProjectResolver`) i ocenia politykę Cedar z podpisanej paczki (ta sama co w gateway'u) na zasobie takim,
+jakim opisuje go GitLab: kanoniczna ścieżka, własne topics (`classification`), a dla grupy i projektu
+`attrs.ancestorClassifications`, czyli mapa `<ścieżka grupy-przodka> -> topics` dokładnie dla grup nad zasobem
+(dla `hr/payroll/team/app`: `hr`, `hr/payroll`, `hr/payroll/team`; dla grupy najwyższego poziomu `{}`). Topics w
+GitLabie się nie dziedziczą, więc `restricted` na grupie `hr` zamyka całe poddrzewo; grupa `hr-eu` nie jest
+poddrzewem `hr`. Rodzic projektu (grupa) dostaje swoją mapę bez siebie.
+
+- Brak zasobu, 403 z GitLaba, `restricted` (na zasobie albo grupie nad nim) i zasób poza zakresem linku
+  (`vsScopes.gitlabGroups`) dają ten sam `not_found_or_denied` z tym samym tekstem. Brak grupy narzędzia to
+  `access_denied`, awaria GitLaba przy odczycie przodka to błąd systemu, nie odmowa.
+- Grupa-przodek niewidoczna dla użytkownika (404/403): jej topics są nieznane, a ukryta grupa może być zastrzeżona,
+  więc zasób jest traktowany jak nieistniejący (fail-closed).
+- Pobranie przodków to jedno `GET /groups/:path` na grupę na ścieżce; odpowiedzi są pamiętane do końca wywołania
+  (`CallCache`, klucz: kontekst wywołania startera, wielkość liter pomijana). `list_projects` czyta stronę projektów
+  grupy raz; `ResultFilter` rozwiązuje wszystkie wyniki jednym `fetchAll`, który bierze projekty z tej strony zamiast
+  `GET /projects/:path` na każdy.
+- `list_projects` jest wyszukiwaniem w zakresie jednej grupy: serwer buduje zapytanie (id grupy, `with_shared=false`,
+  `include_subgroups=false`, 100 na stronę), model podaje tylko grupę. Grupa jest `@ResourceRef`, więc zawężenie linku
+  działa przez politykę (grupa spoza linku to `not_found_or_denied`, bez ujawniania, że istnieje); `QueryScope` nie
+  jest potrzebny, bo GitLab sam stosuje prawa użytkownika, a zakres jest argumentem zasobowym. Ścieżka każdego
+  projektu w wyniku to `@ResourceRef`: projekty z `restricted` w topics (własnych lub grup nad nimi) znikają z listy,
+  bez błędu. Wynik nie ma licznika od GitLaba (`truncated` mówi tylko, że jest następna strona w GitLabie).
+- Źródło topics: GitLab zwraca `topics` dla projektów. Dla grup API v4 pola `topics` nie ma; serwer czyta je, jeśli
+  instancja je poda (mock, rozszerzenie), a brak pola traktuje jako brak klasyfikacji. Patrz STATUS, "Propozycje CC".
 
 ## Jak przechodzi wywołanie
 
@@ -113,6 +144,9 @@ wyłącza TLS i mTLS, trzyma `jti` w pamięci i dopuszcza klucze testowe; starte
 | `MCP_GITLAB_SSL_BUNDLE` | bundle SSL dla HTTPS GitLaba, np. `mcp-internal-ca`; puste = zaufanie JDK | puste |
 | `MCP_GITLAB_FILE_MAX_BYTES` | największy plik zwracany przez `get_file`; nie może przekraczać `gitlab.backend.max-response-size` (1 MB), inaczej serwer nie wstaje | `262144` |
 | `MCP_REDIS_HOST`, `MCP_REDIS_PORT`, `MCP_REDIS_USER`, `MCP_REDIS_PASSWORD` | Redis dla jednorazowego `jti` (użytkownik ACL `mcp-gitlab`, klucze `jti:mcp-gitlab:*`) | `localhost`, `6379`, `mcp-gitlab`, puste |
+| `MCP_POLICY_URL`, `MCP_POLICY_KEY_ID`, `MCP_POLICY_PUBLIC_KEY_FILE` | paczka polityk (podpisana, Ed25519): adres `https`, id klucza i plik klucza publicznego; serwer nie wstaje bez pierwszej paczki | wymagane |
+| `MCP_POLICY_STATE_DIR` | katalog na ostatnią przyjętą rewizję (osobny na instancję); bez niego restart przyjąłby starszą paczkę | wymagane poza `dev` |
+| `MCP_INTERNAL_URL`, `MCP_ACCEPTED_CREDENTIAL_TYPES` | adres serwera w manifeście (`https://mcp-gitlab.internal:8443/mcp`) i przyjmowane typy poświadczeń | wymagane; `user-secret,user-oauth` |
 | `MCP_PORT`, `MCP_BIND` | port i adres nasłuchu | `8443`, `0.0.0.0` |
 
 Endpoint MCP to `/mcp` (domyślne ustawienie startera, tak jak oczekuje gateway: `internal-url:
@@ -204,7 +238,9 @@ handshake'u. Pełne wywołanie narzędzia wymaga gateway'a z hosta (`mcp-gateway
 | `DevProfileLoopbackTest` | `dev` na `0.0.0.0` nie wstaje |
 | `GatewayOnlyAccessTest` | bez JWT 401 (`tools/call`, `ping`, `initialize`), JWT dla innego serwera, innego narzędzia, wariant serwisowy i przeterminowany -> 401; bez JWT tylko health |
 | `GitLabArgumentsTest` (mcp-tools) | wektory `resource-ids/gitlab-*.json` z kontraktu, limit ścieżki = limit kontraktu, ścieżka pliku, ref, iid, quick actions, `@all` |
-| `GitLabServiceTest` (mcp-application) | filtr przestrzeni nazw, `ProjectResultFilter`, odczyt przy commicie, limity, wykrywanie binariów, merge request innego projektu |
+| `ResourcePolicyTest` | projekt trzy poziomy pod grupą `restricted` i pośrednie grupy -> `not_found_or_denied` identyczne jak dla nieistniejącego; `hr-eu` nie jest zamknięte przez `hr`; własne topics projektu; lista bez projektu zastrzeżonego i obcego; przodkowie raz na wywołanie; grupa najwyższego poziomu `{}`; ukryty i awaryjny przodek; `access_denied` bez grupy; zawężenie linku do podgrupy; zakres zapisu |
+| `ManifestTest` | `/mcp-manifest` przechodzi `ManifestRules`, definicje = `tools/list`, `definitionHash`, tytuły, zamknięte schematy, `resourceRefs` i ryzyko |
+| `GitLabServiceTest` (mcp-application) | filtr przestrzeni nazw, odczyt przy commicie, limity, wykrywanie binariów, merge request innego projektu |
 
 Nowe narzędzie dostaje test w tym samym stylu: klasa dziedziczy po `ServerTestSupport`, odpowiedź systemu
 dopisuje się w `StubBackend`.

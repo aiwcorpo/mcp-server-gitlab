@@ -11,8 +11,14 @@ tą tabelą.
 | `get_merge_request` | `READ_ONLY` | `read` | `project`, `iid` (1..2147483647) | `mcp-gitlab-read` | jw. |
 | `comment_merge_request` | `UPDATE` | `update` | `project`, `iid`, `body` (1-10000, bez quick actions i `@all`) | `mcp-gitlab-write` | jw. |
 
-Zasoby C7 (do `@ResourceRef` ze starterem beta, M3): `group` -> `GitLab::Group`, `project` -> `GitLab::Project`.
-Identyfikator i rodzic zasobu to `full_path`/`path_with_namespace` zwrócone przez GitLaba, nigdy argument.
+Tytuły (`@ToolTitle`): `list_projects` - "Lista projektów grupy", `get_file` - "Pobierz plik z repozytorium",
+`get_merge_request` - "Pobierz merge request", `comment_merge_request` - "Dodaj komentarz do merge requesta".
+
+Zasoby C7 (`@ResourceRef`): `group` -> `GitLab::Group` (`list_projects`), `project` -> `GitLab::Project` (pozostałe;
+merge request nie jest typem zasobu kontraktu). Identyfikator i rodzic zasobu to `full_path`/`path_with_namespace`
+zwrócone przez GitLaba, nigdy argument; atrybuty: `classification` (topics zasobu) i `ancestorClassifications`
+(topics wszystkich grup nad zasobem, `{}` dla grupy najwyższego poziomu). Elementy wyniku `list_projects` (`path`) są
+`@ResourceRef` typu `GitLab::Project`: zastrzeżone znikają z listy.
 
 Wyniki: tekst pisany przez użytkowników GitLaba jest obiektem `UntrustedText` (CC-072):
 `{kind: "untrusted-data", format: "text/plain" | "text/markdown", text, truncated}`; typ ma tylko te cztery

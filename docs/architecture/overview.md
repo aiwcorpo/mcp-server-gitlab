@@ -53,4 +53,4 @@ tryb ASYNC.
   ma własnego customizera): błędy są w C10 i audytowane. Schemat buduje `SchemaLimitedToolCallbacks`
   z `@ArgumentLimits`; wzorce ścieżek to `contractPattern`, nie kopie.
 - Adapter: `https` poza `dev`, limit rozmiaru odpowiedzi, 3xx jako błąd, `BackendResponseException` bez treści.
-- `ProjectResultFilter` to jedno miejsce na `ResultFilter`/`QueryScope` startera beta; teraz przepuszcza listę.
+- Listę filtruje starter: `ProjectSummary.path` jest `@ResourceRef`, a `GitLabProjectResolver.fetchAll` rozwiązuje wszystkie wyniki jednym przejściem (strona projektów grupy z pamięci wywołania, topics przodków z `AncestorLookup`).
