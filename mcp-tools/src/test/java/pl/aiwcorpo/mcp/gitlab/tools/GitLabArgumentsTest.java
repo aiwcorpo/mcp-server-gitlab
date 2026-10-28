@@ -83,6 +83,20 @@ class GitLabArgumentsTest {
     }
 
     @Test
+    void commentBodyIsCheckedAsNormalizedAndSentAsNormalized() {
+        // ZWNJ, ZWJ, LRM and RLM pass the starter's free-text rule; normalization turns them into a space or drops
+        // them at the edge of the text, and the checks run on that result.
+        for (String bad : new String[] {"\u200D/merge", "ok\n\u200F /approve", "@all\u200D", "cc\u200C@all", "x\r\n/close"}) {
+            assertThatThrownBy(() -> GitLabArguments.commentBody(bad)).as(bad).isInstanceOf(InvalidToolArgumentException.class);
+        }
+        assertThat(GitLabArguments.commentBody("@a\u200Cll")).isEqualTo("@a ll");
+        assertThat(GitLabArguments.commentBody("x\r\ny")).isEqualTo("x\ny");
+        for (String bad : new String[] {"a\u200Bb", "a\u2060b", "a\uFEFFb", "a\u202Eb"}) {
+            assertThatThrownBy(() -> GitLabArguments.commentBody(bad)).as(bad).isInstanceOf(InvalidToolArgumentException.class);
+        }
+    }
+
+    @Test
     void commentBodyCannotMentionEveryone() {
         for (String ok : new String[] {"thanks @anowak", "mail me: a@all.internal", "see @alligator", "@all-hands doc"}) {
             assertThatCode(() -> GitLabArguments.commentBody(ok)).as(ok).doesNotThrowAnyException();

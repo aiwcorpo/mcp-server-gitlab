@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
+import pl.aiwcorpo.mcp.platform.text.TextHygiene;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -132,25 +133,31 @@ final class GitLabArguments {
         return iid;
     }
 
+    /**
+     * The checks run on the normalized text and that text is what GitLab gets, so they judge the same characters
+     * GitLab sees: an invisible character inside {@code @all} or before a slash becomes a space and the mention
+     * or the quick action is gone, instead of being joined into one.
+     */
     static String commentBody(String body) {
-        if (body == null || body.isBlank() || body.length() > BODY_MAX_LENGTH) {
+        if (body == null || body.length() > BODY_MAX_LENGTH) {
             throw new InvalidToolArgumentException("body must be 1-10000 characters and not blank");
         }
-        for (int i = 0; i < body.length(); i++) {
-            char c = body.charAt(i);
-            if (isControl(c) && c != '\n' && c != '\r' && c != '\t') {
-                throw new InvalidToolArgumentException("body must not contain control characters other than "
-                        + "line breaks and tabs");
-            }
+        if (TextHygiene.firstProblem(body, false) != null) {
+            throw new InvalidToolArgumentException("body must not contain control characters other than "
+                    + "line breaks and tabs, or invisible and bidi formatting characters");
         }
-        if (QUICK_ACTION.matcher(body).find()) {
+        String text = TextHygiene.normalize(body);
+        if (text.isBlank()) {
+            throw new InvalidToolArgumentException("body must be 1-10000 characters and not blank");
+        }
+        if (QUICK_ACTION.matcher(text).find()) {
             throw new InvalidToolArgumentException("body must not contain a line starting with '/': GitLab would "
                     + "run it as a quick action");
         }
-        if (MENTION_ALL.matcher(body).find() || MENTION_ALL.matcher(decodedCharacterReferences(body)).find()) {
+        if (MENTION_ALL.matcher(text).find() || MENTION_ALL.matcher(decodedCharacterReferences(text)).find()) {
             throw new InvalidToolArgumentException("body must not mention @all: it notifies every member of the project");
         }
-        return body;
+        return text;
     }
 
     /**
