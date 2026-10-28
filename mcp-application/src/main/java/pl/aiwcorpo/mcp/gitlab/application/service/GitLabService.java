@@ -82,7 +82,8 @@ public class GitLabService implements GitLabUseCase {
         }
         String text = utf8Text(bytes);
         return new RepositoryFile(project.pathWithNamespace(), metadata.filePath(), effectiveRef, metadata.commitId(),
-                bytes.length, SystemText.plainOrEmpty(text, (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
+                bytes.length, SystemText.hiddenCharacters(text),
+                SystemText.plainOrEmpty(text, (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
     }
 
     @Override

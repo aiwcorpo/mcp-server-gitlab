@@ -40,6 +40,18 @@ class GetFileToolTest extends ServerTestSupport {
     }
 
     @Test
+    void invisibleCharactersAreCountedBecauseTheyDisappearFromTheContent() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            McpSchema.CallToolResult hidden = call(client, "get_file",
+                    Map.of("project", "team-a/app", "path", "src/Login.java"));
+            McpSchema.CallToolResult plain = call(client, "get_file", Map.of("project", "team-a/app", "path", "README.md"));
+
+            assertThat(text(hidden)).contains("\"hiddenCharactersRemoved\":2").doesNotContain("\u202E", "\u200B");
+            assertThat(text(plain)).contains("\"hiddenCharactersRemoved\":0");
+        }
+    }
+
+    @Test
     void withoutRefReadsTheDefaultBranchAndMarksTheContentAsData() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             McpSchema.CallToolResult result = call(client, "get_file", Map.of("project", "team-a/app", "path", "README.md"));

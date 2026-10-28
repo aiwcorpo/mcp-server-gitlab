@@ -1,6 +1,6 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
-M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 76 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
+M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 78 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
 
 Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-10` (kontrakty 2.1.1, Spring Boot 4.1.0, Spring AI
 2.0.0, Java 25). M2 nie jest zaczęty (manifest C6, `@ResourceRef`, `ResultFilter`).
@@ -52,7 +52,7 @@ zaczęty.
 | Claimy `vs` i `vsc:{}` z gateway'a M2 | zaakceptowane: `GatewayLinkClaimsTest` (wywołanie z `virtualServer("team-a-review", Map.of())` przechodzi); zawężenia linku nie są egzekwowane (M2) |
 | Zgodność z mockiem GitLaba (ws-01) | mocka GitLaba w `mcp-platform-dev` nie sprawdzano (STATUS ws-01 go nie obiecuje); `StubBackend` bez zmian w kształtach odpowiedzi |
 
-Weryfikacja: `./mvnw -B clean verify` (JDK 25) -> 76 testów, 0 błędów (mcp-app 57, mcp-tools 10, mcp-application 9).
+Weryfikacja: `./mvnw -B clean verify` (JDK 25) -> 78 testów, 0 błędów (mcp-app 59, mcp-tools 10, mcp-application 9).
 Uruchomienie wg README: profil `dev` na 18520, health 200, `POST /mcp` bez JWT 401; proces zatrzymany.
 
 ## Co działa
@@ -155,3 +155,12 @@ grupa z argumentu musi leżeć w zawężeniu linku, zanim pójdzie zapytanie (w 
 ## Propozycje zmian kontraktu
 
 Brak. Kształt `UntrustedText` (CC-072) to od alpha-7 typ startera; pole `origin` zniknęło z wyniku (typ ma cztery pola).
+
+## Runda 4: poprawki przeglądu alpha-10 (2026-10-28)
+
+| Znalezisko | Status | Dowód |
+| --- | --- | --- |
+| G3-M1 `@all` w emfazie (`_@all_`, `__@all__`, `_&#64;all_`) | poprawione: lookbehind `(?<![A-Za-z0-9])` zamiast `\w`, ta sama zmiana we wzorcu za `@all` (`(?![A-Za-z0-9-])`), bo zamykający `_` też jest `\w`; odrzucane jest też `_@all` i `@all_x` (fałszywy alarm bez znaczenia w recenzji) | `GitLabArgumentsTest.commentBodyCannotMentionEveryone` |
+| G3-L1 brak testu, że do GitLaba idzie treść znormalizowana | poprawione | `CommentMergeRequestToolTest.gitLabReceivesTheNormalizedBodyNotTheOneTheModelSent` (CRLF -> LF w ciele POST) |
+| G3-L2 `get_file` gubi znaki bidi bez śladu | poprawione wariantem pola systemu: `hiddenCharactersRemoved` (liczba usuniętych znaków sterujących, niewidocznych i zmieniających kierunek, liczona na całym pliku przed cięciem); treść nadal oczyszczona, `truncated` bez zmian; opis w README i `tools-catalog.md`. Odrzucone: zamiana na widoczny znacznik (zmieniałaby kod, który model cytuje) | `GetFileToolTest.invisibleCharactersAreCountedBecauseTheyDisappearFromTheContent` |
+| A10-M1 `DevProfileLoopbackTest` | bez zmian, rozwiąże starter alpha-11 | |

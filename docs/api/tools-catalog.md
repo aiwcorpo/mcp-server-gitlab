@@ -20,7 +20,10 @@ pola, więc rodzaj treści wynika z nazwy pola wyniku. Tekst jest normalizowany 
 niewidoczne i sterujące zastępuje spacja), cięty do limitu i oddawany bez dalszych zmian. Pola, które GitLab
 może zostawić puste, są `@Nullable` w schemacie wyniku. Pola `name`, `description`, `defaultBranch` (projekt) oraz `title`, `description`, `sourceBranch`,
 `targetBranch`, `author`, `assignees[]`, `reviewers[]`, `labels[]` (merge request) i `content` (plik) mają ten
-kształt; pozostałe to pola systemu.
+kształt; pozostałe to pola systemu. `get_file` zwraca obok `content` pole systemu `hiddenCharactersRemoved`
+(liczba znaków sterujących, niewidocznych i zmieniających kierunek tekstu, które normalizacja usunęła z całego pliku;
+0 dla czystego pliku, 1 dla pliku z BOM), żeby recenzent kodu nie dostał po cichu wersji oczyszczonej z ataku typu
+Trojan Source.
 
 Wywołania GitLab API v4 (wszystkie jako użytkownik, bez przekierowań):
 

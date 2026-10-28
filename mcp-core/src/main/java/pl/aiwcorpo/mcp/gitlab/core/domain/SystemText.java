@@ -28,6 +28,25 @@ public final class SystemText {
         return UntrustedText.markdownCut(kept, kept.length() < clean.length());
     }
 
+    /**
+     * How many characters {@link TextHygiene#normalize} drops without a trace in the text: C0/C1 controls (other
+     * than tab and line breaks), unpaired surrogates, noncharacters and every format character. Line and
+     * paragraph separators become newlines and are not counted.
+     */
+    public static int hiddenCharacters(String raw) {
+        return (int) raw.codePoints().filter(SystemText::isDroppedByNormalize).count();
+    }
+
+    private static boolean isDroppedByNormalize(int point) {
+        if (point == '\n' || point == '\t' || point == '\r' || point == 0x2028 || point == 0x2029 || point == 0x85) {
+            return false;
+        }
+        return Character.isISOControl(point)
+                || (point >= Character.MIN_SURROGATE && point <= Character.MAX_SURROGATE)
+                || (point >= 0xFDD0 && point <= 0xFDEF) || (point & 0xFFFE) == 0xFFFE
+                || Character.getType(point) == Character.FORMAT;
+    }
+
     /** For a field that is always present, such as the content of a file: an empty file is an empty text. */
     public static UntrustedText plainOrEmpty(String raw, int maxLength) {
         String clean = TextHygiene.normalize(raw);

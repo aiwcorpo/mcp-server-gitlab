@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  *   <li>project {@code team-a/app} (id 42, also reachable under the old path {@code team-a/old-app});
  *       {@code team-a/forbidden} is 403, {@code team-a/broken} fails with 500 and echoes the credential;</li>
  *   <li>files of project 42 at ref {@code main} or {@code v1.0} (commit {@link #COMMIT}): {@code README.md},
- *       {@code docs/guide.md}, {@code logo.png} (binary), {@code dump.sql} (over the size limit);</li>
+ *       {@code docs/guide.md}, {@code src/Login.java} (a bidi override and a zero-width space), {@code logo.png} (binary), {@code dump.sql} (over the size limit);</li>
  *   <li>merge request 1 of project 42; 5 has no description, author, merge time or labels and a title with an
  *       invisible character, a long description in 4; 3 is 403; notes can be added to 1;</li>
  *   <li>{@code team-a/bad-json} answers 200 with a body that is not JSON, {@code team-a/redirect} answers 302 to
@@ -46,6 +46,7 @@ final class StubBackend {
     private static final Pattern PROJECT_CHILD = Pattern.compile("/api/v4/projects/(\\d+)/(.+)");
     private static final Map<String, byte[]> FILES = Map.of(
             "README.md", README.getBytes(StandardCharsets.UTF_8),
+            "src/Login.java", "if (user.isAdmin\u202E()) { // check\u200B\n}\n".getBytes(StandardCharsets.UTF_8),
             "docs/guide.md", "Za\u017c\u00f3\u0142\u0107 g\u0119\u015bl\u0105 ja\u017a\u0144\n".getBytes(StandardCharsets.UTF_8),
             "logo.png", new byte[] {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0, 0, 0, 13});
 

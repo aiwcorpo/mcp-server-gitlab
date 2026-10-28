@@ -36,6 +36,17 @@ class CommentMergeRequestToolTest extends ServerTestSupport {
     }
 
     @Test
+    void gitLabReceivesTheNormalizedBodyNotTheOneTheModelSent() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            McpSchema.CallToolResult result = call(client, "comment_merge_request",
+                    Map.of("project", "team-a/app", "iid", 1, "body", "first\r\nsecond\r\n"));
+
+            assertThat(result.isError()).isFalse();
+        }
+        assertThat(BACKEND.requests().getLast().body()).isEqualTo("{\"body\":\"first\\nsecond\\n\"}");
+    }
+
+    @Test
     void withoutCredentialAsksToConnectTheAccount() {
         try (McpSyncClient client = clientWithCredential(null)) {
             assertCredentialRequired(call(client, "comment_merge_request",

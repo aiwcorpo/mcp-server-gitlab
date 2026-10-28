@@ -34,11 +34,14 @@ final class GitLabArguments {
     private static final Pattern QUICK_ACTION = Pattern.compile("(?m)^[ \\t]*/[A-Za-z]");
 
     /**
-     * {@code @all} notifies every member of the project from one comment. Only a word character before it
-     * defeats the mention in GitLab (an e-mail address), so anything else, another {@code @} included, is refused;
-     * case is ignored because it is not known to matter to GitLab.
+     * {@code @all} notifies every member of the project from one comment. Only a letter or digit before it
+     * defeats the mention in GitLab (an e-mail address), so anything else, another {@code @} included, is refused.
+     * An underscore is deliberately not on that list, on either side: in Markdown {@code _@all_} and
+     * {@code __@all__} are emphasis, the renderer drops the underscores and the mention is found in the text that
+     * remains. Case is ignored because it is not known to matter to GitLab.
      */
-    private static final Pattern MENTION_ALL = Pattern.compile("(?<!\\w)@all(?![\\w-])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MENTION_ALL = Pattern.compile("(?<![A-Za-z0-9])@all(?![A-Za-z0-9-])",
+            Pattern.CASE_INSENSITIVE);
 
     /**
      * Character references that can spell {@code @all}: numeric ones (decimal or hex, the only way to write the
