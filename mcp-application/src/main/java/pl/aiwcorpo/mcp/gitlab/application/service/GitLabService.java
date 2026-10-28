@@ -21,37 +21,30 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.ResourceNotFoundException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.SystemText;
 import pl.aiwcorpo.mcp.gitlab.core.port.in.GitLabUseCase;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
-import pl.aiwcorpo.mcp.gitlab.core.port.out.ProjectResultFilter;
 
 /**
  * Use cases of the server. A plain class: mcp-app makes it a bean, so this module stays free of Spring.
  *
- * <p>Paths from the caller are only ever used for the first lookup; GitLab answers with the numeric id and
- * the canonical path, and the id addresses every later call. Comparing path strings here would get case
- * (GitLab paths are case-insensitive) and moved projects (GitLab follows the old path) wrong.
+ * <p>The group or project comes resolved: the starter's resolver asked GitLab with the caller's credential and the
+ * resource policy accepted the answer. The numeric id addresses every call here. Comparing path strings would get
+ * case (GitLab paths are case-insensitive) and moved projects (GitLab follows the old path) wrong.
  */
 public class GitLabService implements GitLabUseCase {
 
-    /** GitLab's own maximum for {@code per_page}. */
-    static final int PAGE_SIZE = 100;
-
     private final GitLabPort gitlab;
-    private final ProjectResultFilter resultFilter;
     private final long maxFileBytes;
 
-    public GitLabService(GitLabPort gitlab, ProjectResultFilter resultFilter, long maxFileBytes) {
+    public GitLabService(GitLabPort gitlab, long maxFileBytes) {
         if (maxFileBytes <= 0) {
             throw new IllegalArgumentException("maxFileBytes must be positive");
         }
         this.gitlab = gitlab;
-        this.resultFilter = resultFilter;
         this.maxFileBytes = maxFileBytes;
     }
 
     @Override
-    public ProjectList listProjects(String groupPath) {
-        GitLabGroup group = gitlab.findGroup(groupPath).orElseThrow(ResourceNotFoundException::new);
-        ProjectPage page = gitlab.listGroupProjects(group.id(), PAGE_SIZE);
+    public ProjectList listProjects(GitLabGroup group) {
+        ProjectPage page = gitlab.listGroupProjects(group.id(), GitLabPort.PAGE_SIZE);
         List<ProjectSummary> inGroup = new ArrayList<>();
         for (int i = 0; i < page.projects().size(); i++) {
             // with_shared=false already keeps projects of other namespaces out; this still holds if GitLab
@@ -60,12 +53,11 @@ public class GitLabService implements GitLabUseCase {
                 inGroup.add(page.projects().get(i));
             }
         }
-        return new ProjectList(group.fullPath(), resultFilter.retainAllowed(inGroup), page.hasMore());
+        return new ProjectList(group.fullPath(), inGroup, page.hasMore());
     }
 
     @Override
-    public RepositoryFile getFile(String projectPath, String filePath, String ref) {
-        GitLabProject project = project(projectPath);
+    public RepositoryFile getFile(GitLabProject project, String filePath, String ref) {
         String effectiveRef = ref != null ? ref : project.defaultBranch();
         if (effectiveRef == null) {
             throw new ResourceNotFoundException();
@@ -87,8 +79,7 @@ public class GitLabService implements GitLabUseCase {
     }
 
     @Override
-    public MergeRequest getMergeRequest(String projectPath, long iid) {
-        GitLabProject project = project(projectPath);
+    public MergeRequest getMergeRequest(GitLabProject project, long iid) {
         FoundMergeRequest found = gitlab.findMergeRequest(project.id(), iid)
                 .orElseThrow(ResourceNotFoundException::new);
         if (found.projectId() != project.id()) {
@@ -98,15 +89,10 @@ public class GitLabService implements GitLabUseCase {
     }
 
     @Override
-    public MergeRequestNote commentMergeRequest(String projectPath, long iid, String body) {
-        GitLabProject project = project(projectPath);
+    public MergeRequestNote commentMergeRequest(GitLabProject project, long iid, String body) {
         return gitlab.addMergeRequestNote(project.id(), iid, body)
                 .orElseThrow(ResourceNotFoundException::new)
                 .inProject(project.pathWithNamespace());
-    }
-
-    private GitLabProject project(String projectPath) {
-        return gitlab.findProject(projectPath).orElseThrow(ResourceNotFoundException::new);
     }
 
     /** UTF-8 text without NUL bytes; anything else counts as binary and is not returned. */

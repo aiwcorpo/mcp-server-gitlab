@@ -37,6 +37,8 @@ abstract class ServerTestSupport {
     static final String SYSTEM = "gitlab";
     static final String READ_GROUP = "mcp-gitlab-read";
     static final String WRITE_GROUP = "mcp-gitlab-write";
+    /** Scope group of the sample bundle: grants GitLab group team-a and everything below it. */
+    static final String SCOPE_GROUP = "mcp-gitlab-grp-team-a";
 
     /** True only for a system outside the contracts' SystemId; gitlab is on the list, so it is false. */
     static final boolean TRIAL_SYSTEM = false;
@@ -75,7 +77,7 @@ abstract class ServerTestSupport {
 
     /** The caller of most tests: a member of the read and write groups of the system (C9). */
     static void reader(TestGateway.Token user) {
-        user.username("jkowalski").groups(List.of(READ_GROUP, WRITE_GROUP));
+        user.username("jkowalski").groups(List.of(READ_GROUP, WRITE_GROUP, SCOPE_GROUP));
     }
 
     /** Same, with the JWT claims of the caller set by {@code user} (a call through a link carries {@code vs}). */
@@ -127,7 +129,7 @@ abstract class ServerTestSupport {
     static void assertNotFoundOrDenied(McpSchema.CallToolResult result) {
         assertThat(result.isError()).isTrue();
         assertThat(text(result)).isEqualTo(
-                "{\"error\":\"not_found_or_denied\",\"message\":\"The GitLab resource does not exist or you have no access to it.\"}");
+                "{\"error\":\"not_found_or_denied\",\"message\":\"The resource does not exist or you do not have access to it.\"}");
     }
 
     static void assertInvalidArgument(McpSchema.CallToolResult result, String messageFragment) {

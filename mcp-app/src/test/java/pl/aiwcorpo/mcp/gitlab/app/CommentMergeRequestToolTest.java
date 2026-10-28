@@ -90,6 +90,7 @@ class CommentMergeRequestToolTest extends ServerTestSupport {
             assertInvalidArgument(call(client, "comment_merge_request",
                     Map.of("project", "/team-a/app", "iid", 1, "body", "ok")), "project does not match the required format");
         }
-        assertThat(BACKEND.requests()).isEmpty();
+        assertThat(BACKEND.requests()).as("no note was posted; only the resolver's lookups")
+                .noneMatch(seen -> seen.method().equals("POST"));
     }
 }

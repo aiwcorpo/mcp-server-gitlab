@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -77,6 +78,7 @@ public class GitLabRestAdapter implements GitLabPort {
     };
 
     private final RestClient client;
+    private final CallCache callCache = new CallCache();
 
     public GitLabRestAdapter(GitLabBackendProperties properties, ObjectProvider<SslBundles> sslBundles,
             Environment environment) {
@@ -103,15 +105,18 @@ public class GitLabRestAdapter implements GitLabPort {
                 .build();
     }
 
+    /** GitLab paths ignore case, so the cache does too: {@code Team-A} and {@code team-a} are one lookup. */
     @Override
     public Optional<GitLabGroup> findGroup(String fullPath) {
-        BackendCredential credential = CredentialContext.require(SYSTEM);
-        return visible(() -> client.get()
-                .uri("/groups/{id}?with_projects=false", fullPath)
-                .headers(headers -> GitLabCredentials.apply(credential, headers))
-                .retrieve()
-                .body(GroupResponse.class))
-                .map(group -> new GitLabGroup(group.id(), required(group.fullPath())));
+        return callCache.get("group:" + fullPath.toLowerCase(Locale.ROOT), () -> {
+            BackendCredential credential = CredentialContext.require(SYSTEM);
+            return visible(() -> client.get()
+                    .uri("/groups/{id}?with_projects=false", fullPath)
+                    .headers(headers -> GitLabCredentials.apply(credential, headers))
+                    .retrieve()
+                    .body(GroupResponse.class))
+                    .map(group -> new GitLabGroup(group.id(), required(group.fullPath()), reportedTopics(group.topics())));
+        });
     }
 
     @Override
@@ -122,27 +127,29 @@ public class GitLabRestAdapter implements GitLabPort {
                 .headers(headers -> GitLabCredentials.apply(credential, headers))
                 .retrieve()
                 .body(ProjectResponse.class))
-                .map(project -> new GitLabProject(project.id(), required(project.pathWithNamespace()),
-                        project.defaultBranch()));
+                .map(ProjectResponse::toDomain);
     }
 
     @Override
     public ProjectPage listGroupProjects(long groupId, int pageSize) {
-        BackendCredential credential = CredentialContext.require(SYSTEM);
-        // A group that resolved a moment ago and now answers 404/403 is treated like an empty one: the caller
-        // learns nothing beyond what the lookup already told it.
-        Optional<ResponseEntity<List<ProjectResponse>>> page = visible(() -> client.get()
-                .uri("/groups/{id}/projects?per_page={size}&page=1&order_by=path&sort=asc"
-                        + "&include_subgroups=false&with_shared=false", groupId, pageSize)
-                .headers(headers -> GitLabCredentials.apply(credential, headers))
-                .retrieve()
-                .toEntity(PROJECT_LIST));
-        List<ProjectResponse> projects = page.map(ResponseEntity::getBody).orElse(List.of());
-        String nextPage = page.map(response -> response.getHeaders().getFirst("X-Next-Page")).orElse(null);
-        return new ProjectPage(
-                projects.stream().map(ProjectResponse::toSummary).toList(),
-                projects.stream().map(ProjectResponse::namespaceId).toList(),
-                nextPage != null && !nextPage.isBlank());
+        return callCache.get("projects:" + groupId + ":" + pageSize, () -> {
+            BackendCredential credential = CredentialContext.require(SYSTEM);
+            // A group that resolved a moment ago and now answers 404/403 is treated like an empty one: the caller
+            // learns nothing beyond what the lookup already told it.
+            Optional<ResponseEntity<List<ProjectResponse>>> page = visible(() -> client.get()
+                    .uri("/groups/{id}/projects?per_page={size}&page=1&order_by=path&sort=asc"
+                            + "&include_subgroups=false&with_shared=false", groupId, pageSize)
+                    .headers(headers -> GitLabCredentials.apply(credential, headers))
+                    .retrieve()
+                    .toEntity(PROJECT_LIST));
+            List<ProjectResponse> projects = page.map(ResponseEntity::getBody).orElse(List.of());
+            String nextPage = page.map(response -> response.getHeaders().getFirst("X-Next-Page")).orElse(null);
+            return new ProjectPage(
+                    projects.stream().map(ProjectResponse::toSummary).toList(),
+                    projects.stream().map(ProjectResponse::toDomain).toList(),
+                    projects.stream().map(ProjectResponse::namespaceId).toList(),
+                    nextPage != null && !nextPage.isBlank());
+        });
     }
 
     @Override
@@ -219,6 +226,11 @@ public class GitLabRestAdapter implements GitLabPort {
         }
     }
 
+    /** Topics are user-written labels of the classification; a missing list is no topics, a null entry is dropped. */
+    private static List<String> reportedTopics(List<String> reported) {
+        return reported == null ? List.of() : reported.stream().filter(Objects::nonNull).toList();
+    }
+
     private static String required(String value) {
         if (value == null || value.isBlank()) {
             throw new BackendResponseException("field the server relies on is missing");
@@ -273,7 +285,7 @@ public class GitLabRestAdapter implements GitLabPort {
     // because GitLab leaves out fields a representation does not have (e.g. archived on a single project).
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record GroupResponse(long id, @JsonProperty("full_path") String fullPath) {
+    record GroupResponse(long id, @JsonProperty("full_path") String fullPath, List<String> topics) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -284,7 +296,11 @@ public class GitLabRestAdapter implements GitLabPort {
     record ProjectResponse(long id, String name, @JsonProperty("path_with_namespace") String pathWithNamespace,
             String description, @JsonProperty("default_branch") String defaultBranch, Boolean archived,
             @JsonProperty("last_activity_at") String lastActivityAt, @JsonProperty("web_url") String webUrl,
-            NamespaceResponse namespace) {
+            NamespaceResponse namespace, List<String> topics) {
+
+        GitLabProject toDomain() {
+            return new GitLabProject(id, required(pathWithNamespace), defaultBranch, reportedTopics(topics));
+        }
 
         ProjectSummary toSummary() {
             return new ProjectSummary(pathWithNamespace,

@@ -25,12 +25,16 @@ class GitLabServiceTest {
     private static final long GROUP_ID = 7;
     private static final long PROJECT_ID = 42;
 
+    private static final GitLabGroup TEAM_A = new GitLabGroup(GROUP_ID, "team-a", List.of());
+    private static final GitLabProject APP = new GitLabProject(PROJECT_ID, "team-a/app", "main", List.of());
+    private static final GitLabProject EMPTY = new GitLabProject(43, "team-a/empty", null, List.of());
+
     private final FakeGitLab gitlab = new FakeGitLab();
-    private final GitLabService service = new GitLabService(gitlab, projects -> projects, 16);
+    private final GitLabService service = new GitLabService(gitlab, 16);
 
     @Test
     void listsOnlyProjectsWhoseNamespaceIsTheResolvedGroup() {
-        var list = service.listProjects("TEAM-A");
+        var list = service.listProjects(TEAM_A);
 
         assertThat(list.group()).as("canonical path from GitLab, not the argument").isEqualTo("team-a");
         assertThat(list.projects()).extracting(ProjectSummary::path).containsExactly("team-a/app");
@@ -38,15 +42,8 @@ class GitLabServiceTest {
     }
 
     @Test
-    void theResultFilterSeesEveryListing() {
-        GitLabService filtering = new GitLabService(gitlab, projects -> List.of(), 16);
-
-        assertThat(filtering.listProjects("team-a").projects()).isEmpty();
-    }
-
-    @Test
     void readsTheFileAtTheCommitTheRefPointedTo() {
-        var file = service.getFile("Team-A/App", "README.md", null);
+        var file = service.getFile(APP, "README.md", null);
 
         assertThat(file.project()).isEqualTo("team-a/app");
         assertThat(file.ref()).as("default branch when no ref is given").isEqualTo("main");
@@ -57,7 +54,7 @@ class GitLabServiceTest {
 
     @Test
     void aFileOverTheLimitIsNotReadAtAll() {
-        assertThatThrownBy(() -> service.getFile("team-a/app", "big.txt", "main"))
+        assertThatThrownBy(() -> service.getFile(APP, "big.txt", "main"))
                 .isInstanceOf(FileNotReturnedException.class)
                 .extracting(ex -> ((FileNotReturnedException) ex).reason())
                 .isEqualTo(FileNotReturnedException.Reason.TOO_LARGE);
@@ -66,14 +63,14 @@ class GitLabServiceTest {
 
     @Test
     void contentLargerThanAnnouncedIsNotReturned() {
-        assertThatThrownBy(() -> service.getFile("team-a/app", "grew.txt", "main"))
+        assertThatThrownBy(() -> service.getFile(APP, "grew.txt", "main"))
                 .isInstanceOf(FileNotReturnedException.class);
     }
 
     @Test
     void binaryContentIsNotReturned() {
         for (String path : new String[] {"nul.bin", "latin1.txt"}) {
-            assertThatThrownBy(() -> service.getFile("team-a/app", path, "main"))
+            assertThatThrownBy(() -> service.getFile(APP, path, "main"))
                     .isInstanceOf(FileNotReturnedException.class)
                     .extracting(ex -> ((FileNotReturnedException) ex).reason())
                     .isEqualTo(FileNotReturnedException.Reason.BINARY);
@@ -82,21 +79,14 @@ class GitLabServiceTest {
 
     @Test
     void anEmptyRepositoryHasNoDefaultFile() {
-        assertThatThrownBy(() -> service.getFile("team-a/empty", "README.md", null))
+        assertThatThrownBy(() -> service.getFile(EMPTY, "README.md", null))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void aMergeRequestOfAnotherProjectIsNotFound() {
-        assertThat(service.getMergeRequest("team-a/app", 1).project()).isEqualTo("team-a/app");
-        assertThatThrownBy(() -> service.getMergeRequest("team-a/app", 2)).isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
-    void unknownPathsAreNotFound() {
-        assertThatThrownBy(() -> service.listProjects("nope")).isInstanceOf(ResourceNotFoundException.class);
-        assertThatThrownBy(() -> service.commentMergeRequest("nope/app", 1, "x"))
-                .isInstanceOf(ResourceNotFoundException.class);
+        assertThat(service.getMergeRequest(APP, 1).project()).isEqualTo("team-a/app");
+        assertThatThrownBy(() -> service.getMergeRequest(APP, 2)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     /** GitLab in memory: paths are looked up case-insensitively, as GitLab does. */
@@ -106,23 +96,18 @@ class GitLabServiceTest {
 
         @Override
         public Optional<GitLabGroup> findGroup(String fullPath) {
-            return "team-a".equalsIgnoreCase(fullPath) ? Optional.of(new GitLabGroup(GROUP_ID, "team-a")) : Optional.empty();
+            return "team-a".equalsIgnoreCase(fullPath) ? Optional.of(TEAM_A) : Optional.empty();
         }
 
         @Override
         public Optional<GitLabProject> findProject(String path) {
-            if ("team-a/app".equalsIgnoreCase(path)) {
-                return Optional.of(new GitLabProject(PROJECT_ID, "team-a/app", "main"));
-            }
-            if ("team-a/empty".equalsIgnoreCase(path)) {
-                return Optional.of(new GitLabProject(43, "team-a/empty", null));
-            }
             return Optional.empty();
         }
 
         @Override
         public ProjectPage listGroupProjects(long groupId, int pageSize) {
-            return new ProjectPage(List.of(summary("team-a/app"), summary("other/shared")), List.of(GROUP_ID, 99L), true);
+            return new ProjectPage(List.of(summary("team-a/app"), summary("other/shared")),
+                    List.of(APP, new GitLabProject(90, "other/shared", "main", List.of())), List.of(GROUP_ID, 99L), true);
         }
 
         @Override

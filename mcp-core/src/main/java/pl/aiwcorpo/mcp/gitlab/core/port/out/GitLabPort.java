@@ -14,11 +14,15 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectPage;
  */
 public interface GitLabPort {
 
+    /** GitLab's own maximum for {@code per_page}; the listing of a group's projects always asks for this many. */
+    int PAGE_SIZE = 100;
+
     Optional<GitLabGroup> findGroup(String fullPath);
 
     Optional<GitLabProject> findProject(String pathWithNamespace);
 
-    /** First page of projects directly in the group, ordered by path; shared projects are not included. */
+    /** First page of projects directly in the group, ordered by path; shared projects are not included. Answers for the
+     * same group and size within one tool call are the same page. */
     ProjectPage listGroupProjects(long groupId, int pageSize);
 
     Optional<FileMetadata> fileMetadata(long projectId, String filePath, String ref);
