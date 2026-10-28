@@ -4,7 +4,7 @@ M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-2 (kontrakty 3.1.0), `@ToolTi
 
 M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 78 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
 
-Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-beta-2` (kontrakty 3.1.0, Spring Boot 4.1.0, Spring AI
+Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-beta-3` (kontrakty 3.1.0, Spring Boot 4.1.0, Spring AI
 2.0.0, Java 25). Tag `v3.0.0-beta-3` nie istniał przy zamknięciu M3; przejście to podbicie `mcp-platform.version`
 w `pom.xml` i przejrzenie MIGRATION "Z beta-2 na beta-3".
 
