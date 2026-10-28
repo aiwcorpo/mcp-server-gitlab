@@ -18,7 +18,7 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectPage;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectSummary;
 import pl.aiwcorpo.mcp.gitlab.core.domain.RepositoryFile;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ResourceNotFoundException;
-import pl.aiwcorpo.mcp.gitlab.core.domain.UntrustedText;
+import pl.aiwcorpo.mcp.gitlab.core.domain.SystemText;
 import pl.aiwcorpo.mcp.gitlab.core.port.in.GitLabUseCase;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.ProjectResultFilter;
@@ -82,7 +82,7 @@ public class GitLabService implements GitLabUseCase {
         }
         String text = utf8Text(bytes);
         return new RepositoryFile(project.pathWithNamespace(), metadata.filePath(), effectiveRef, metadata.commitId(),
-                bytes.length, UntrustedText.of("gitlab-file-content", UntrustedText.PLAIN, text, Integer.MAX_VALUE));
+                bytes.length, SystemText.plainOrEmpty(text, (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
     }
 
     @Override

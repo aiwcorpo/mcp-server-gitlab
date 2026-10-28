@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Map;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -66,10 +67,15 @@ abstract class ServerTestSupport {
 
     /** Same, with {@code X-MCP-Credential-Type} set to {@code type}: GitLab is also connected through OAuth. */
     McpSyncClient clientWithCredential(String credential, BackendCredential.Type type) {
+        return clientAs(user -> user.username("jkowalski"), credential, type);
+    }
+
+    /** Same, with the JWT claims of the caller set by {@code user} (a call through a link carries {@code vs}). */
+    McpSyncClient clientAs(Consumer<TestGateway.Token> user, String credential, BackendCredential.Type type) {
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport.builder(baseUrl())
                 .endpoint(ENDPOINT)
                 .openConnectionOnStartup(false)
-                .httpRequestCustomizer(GATEWAY.asGateway(user -> user.username("jkowalski"), credential, type))
+                .httpRequestCustomizer(GATEWAY.asGateway(user, credential, type))
                 .build();
         McpSyncClient client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(20)).build();
         client.initialize();

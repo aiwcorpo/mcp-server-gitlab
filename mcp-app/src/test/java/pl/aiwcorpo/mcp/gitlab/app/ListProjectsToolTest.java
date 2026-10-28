@@ -27,11 +27,11 @@ class ListProjectsToolTest extends ServerTestSupport {
             assertThat(text(result))
                     .as("canonical path from GitLab, not the argument").contains("\"group\":\"team-a\"")
                     .contains("\"path\":\"team-a/app\"", "\"path\":\"team-a/lib\"", "\"truncated\":true",
-                            "\"origin\":\"gitlab-project-description\"", "\"format\":\"text/markdown\"")
+                            "\"format\":\"text/markdown\"")
                     .as("the name and the default branch are data too")
-                    .contains("{\"kind\":\"untrusted-data\",\"format\":\"text/plain\",\"origin\":\"gitlab-project-name\","
+                    .contains("{\"kind\":\"untrusted-data\",\"format\":\"text/plain\","
                             + "\"text\":\"App\",\"truncated\":false}")
-                    .contains("\"origin\":\"gitlab-branch\",\"text\":\"main\"")
+                    .contains("\"text\":\"main\",\"truncated\":false")
                     .as("a project of another namespace").doesNotContain("finance/secret")
                     .as("fields outside the domain stay in the adapter").doesNotContain("runners_token", "GR1348941");
         }

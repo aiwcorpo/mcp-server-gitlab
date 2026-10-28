@@ -1,5 +1,7 @@
 package pl.aiwcorpo.mcp.gitlab.core.domain;
 
+import pl.aiwcorpo.mcp.platform.text.UntrustedText;
+
 /**
  * A text file read from a repository.
  *

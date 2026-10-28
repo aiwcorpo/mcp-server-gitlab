@@ -37,11 +37,12 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequest;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequestNote;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectPage;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectSummary;
-import pl.aiwcorpo.mcp.gitlab.core.domain.UntrustedText;
+import pl.aiwcorpo.mcp.gitlab.core.domain.SystemText;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
 import pl.aiwcorpo.mcp.platform.security.BackendCredential;
 import pl.aiwcorpo.mcp.platform.security.CredentialContext;
 import pl.aiwcorpo.mcp.platform.security.CredentialRequiredException;
+import pl.aiwcorpo.mcp.platform.text.UntrustedText;
 
 /**
  * GitLab REST API v4 as the user: with the credential the gateway resolved for this request (C3), never with
@@ -287,10 +288,9 @@ public class GitLabRestAdapter implements GitLabPort {
 
         ProjectSummary toSummary() {
             return new ProjectSummary(pathWithNamespace,
-                    plain("gitlab-project-name", name, NAME_MAX_CHARS),
-                    UntrustedText.of("gitlab-project-description", UntrustedText.MARKDOWN, emptyToNull(description),
-                            PROJECT_DESCRIPTION_MAX_CHARS),
-                    plain("gitlab-branch", defaultBranch, NAME_MAX_CHARS), Boolean.TRUE.equals(archived),
+                    SystemText.plain(name, NAME_MAX_CHARS),
+                    SystemText.markdown(description, PROJECT_DESCRIPTION_MAX_CHARS),
+                    SystemText.plain(defaultBranch, NAME_MAX_CHARS), Boolean.TRUE.equals(archived),
                     lastActivityAt, webUrl);
         }
 
@@ -315,36 +315,27 @@ public class GitLabRestAdapter implements GitLabPort {
 
         FoundMergeRequest toDomain() {
             return new FoundMergeRequest(projectId, new MergeRequest(null, iid,
-                    plain("gitlab-merge-request-title", title, TITLE_MAX_CHARS),
-                    UntrustedText.of("gitlab-merge-request-description", UntrustedText.MARKDOWN, emptyToNull(description),
-                            MERGE_REQUEST_DESCRIPTION_MAX_CHARS),
-                    state, Boolean.TRUE.equals(draft), plain("gitlab-branch", sourceBranch, NAME_MAX_CHARS),
-                    plain("gitlab-branch", targetBranch, NAME_MAX_CHARS),
-                    author == null ? null : plain("gitlab-username", author.username(), NAME_MAX_CHARS),
+                    SystemText.plain(title, TITLE_MAX_CHARS),
+                    SystemText.markdown(description, MERGE_REQUEST_DESCRIPTION_MAX_CHARS),
+                    state, Boolean.TRUE.equals(draft), SystemText.plain(sourceBranch, NAME_MAX_CHARS),
+                    SystemText.plain(targetBranch, NAME_MAX_CHARS),
+                    author == null ? null : SystemText.plain(author.username(), NAME_MAX_CHARS),
                     usernames(assignees), usernames(reviewers), labels(labels), createdAt, updatedAt, mergedAt,
                     detailedMergeStatus, Boolean.TRUE.equals(hasConflicts), webUrl));
         }
 
         private static List<UntrustedText> labels(List<String> labels) {
             return labels == null ? List.of() : labels.stream().filter(Objects::nonNull)
-                    .map(label -> plain("gitlab-label", label, NAME_MAX_CHARS)).toList();
+                    .map(label -> SystemText.plain(label, NAME_MAX_CHARS)).filter(Objects::nonNull).toList();
         }
 
         private static List<UntrustedText> usernames(List<UserResponse> users) {
             return users == null ? List.of() : users.stream().map(UserResponse::username).filter(Objects::nonNull)
-                    .map(username -> plain("gitlab-username", username, NAME_MAX_CHARS)).toList();
+                    .map(username -> SystemText.plain(username, NAME_MAX_CHARS)).filter(Objects::nonNull).toList();
         }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record NoteResponse(long id, UserResponse author, @JsonProperty("created_at") String createdAt) {
-    }
-
-    private static UntrustedText plain(String origin, String text, int maxChars) {
-        return UntrustedText.of(origin, UntrustedText.PLAIN, text, maxChars);
-    }
-
-    private static String emptyToNull(String text) {
-        return text == null || text.isEmpty() ? null : text;
     }
 }

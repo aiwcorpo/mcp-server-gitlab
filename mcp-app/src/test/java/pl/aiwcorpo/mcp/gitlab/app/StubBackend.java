@@ -28,7 +28,8 @@ import java.util.regex.Pattern;
  *       {@code team-a/forbidden} is 403, {@code team-a/broken} fails with 500 and echoes the credential;</li>
  *   <li>files of project 42 at ref {@code main} or {@code v1.0} (commit {@link #COMMIT}): {@code README.md},
  *       {@code docs/guide.md}, {@code logo.png} (binary), {@code dump.sql} (over the size limit);</li>
- *   <li>merge request 1 of project 42; 3 is 403; notes can be added to 1;</li>
+ *   <li>merge request 1 of project 42; 5 has no description, author, merge time or labels and a title with an
+ *       invisible character, a long description in 4; 3 is 403; notes can be added to 1;</li>
  *   <li>{@code team-a/bad-json} answers 200 with a body that is not JSON, {@code team-a/redirect} answers 302 to
  *       {@code /elsewhere} (never to be followed), {@code team-a/slow} answers after 3 s, {@code team-a/huge}
  *       with a body over the 64 KB limit the tests configure;</li>
@@ -193,6 +194,16 @@ final class StubBackend {
                      "detailed_merge_status":"mergeable","sha":"8888888888888888888888888888888888888888","has_conflicts":false,
                      "web_url":"https://gitlab.aiwcorpo.internal/team-a/app/-/merge_requests/1",
                      "diff_refs":{"base_sha":"1111111111111111111111111111111111111111"}}""");
+        } else if (rest.equals("merge_requests/5") && "GET".equals(method)) {
+            json(exchange, 200, """
+                    {"id":9005,"iid":5,"project_id":42,"title":"Fix @a\\u200Bll mention &#64;all",
+                     "description":null,"state":"opened","created_at":"2026-10-23T08:00:00.000Z",
+                     "updated_at":"2026-10-23T08:00:00.000Z","merged_at":null,"target_branch":"main",
+                     "source_branch":"fix/mention","author":null,"assignees":[],"reviewers":[],"labels":[],
+                     "draft":true,"detailed_merge_status":null,"has_conflicts":null,"web_url":null}""");
+        } else if (rest.equals("merge_requests/4") && "GET".equals(method)) {
+            json(exchange, 200, "{\"id\":9004,\"iid\":4,\"project_id\":42,\"title\":\"Long\",\"description\":\""
+                    + "word ".repeat(5_000) + "\",\"state\":\"opened\",\"draft\":false,\"has_conflicts\":false}");
         } else if (rest.equals("merge_requests/3") || rest.equals("merge_requests/3/notes")) {
             json(exchange, 403, "{\"message\":\"403 Forbidden\"}");
         } else if (rest.equals("merge_requests/1/notes") && "POST".equals(method)) {
