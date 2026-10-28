@@ -36,14 +36,14 @@ class CommentMergeRequestToolTest extends ServerTestSupport {
     }
 
     @Test
-    void gitLabReceivesTheNormalizedBodyNotTheOneTheModelSent() {
+    void lineBreaksAreSentAsTheyCame() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             McpSchema.CallToolResult result = call(client, "comment_merge_request",
                     Map.of("project", "team-a/app", "iid", 1, "body", "first\r\nsecond\r\n"));
 
             assertThat(result.isError()).isFalse();
         }
-        assertThat(BACKEND.requests().getLast().body()).isEqualTo("{\"body\":\"first\\nsecond\\n\"}");
+        assertThat(BACKEND.requests().getLast().body()).isEqualTo("{\"body\":\"first\\r\\nsecond\\r\\n\"}");
     }
 
     @Test

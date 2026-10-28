@@ -31,6 +31,8 @@ final class GitLabArguments {
      * A GitLab quick action is a line starting with {@code /command}; in a note it would run as the user
      * (merge, approve, close, reassign), turning a comment into a different, unreviewed action.
      */
+    private static final Pattern INVISIBLE_JOINERS = Pattern.compile("[\\u200C-\\u200F]");
+
     private static final Pattern QUICK_ACTION = Pattern.compile("(?m)^[ \\t]*/[A-Za-z]");
 
     /**
@@ -145,7 +147,7 @@ final class GitLabArguments {
         if (body == null || body.length() > BODY_MAX_LENGTH) {
             throw new InvalidToolArgumentException("body must be 1-10000 characters and not blank");
         }
-        if (TextHygiene.firstProblem(body, false) != null) {
+        if (TextHygiene.firstProblem(body, false, true) != null) {
             throw new InvalidToolArgumentException("body must not contain control characters other than "
                     + "line breaks and tabs, or invisible and bidi formatting characters");
         }
@@ -153,12 +155,16 @@ final class GitLabArguments {
         if (text.isBlank()) {
             throw new InvalidToolArgumentException("body must be 1-10000 characters and not blank");
         }
-        if (QUICK_ACTION.matcher(text).find()) {
-            throw new InvalidToolArgumentException("body must not contain a line starting with '/': GitLab would "
-                    + "run it as a quick action");
-        }
-        if (MENTION_ALL.matcher(text).find() || MENTION_ALL.matcher(decodedCharacterReferences(text)).find()) {
-            throw new InvalidToolArgumentException("body must not mention @all: it notifies every member of the project");
+        // ZWNJ, ZWJ, LRM and RLM stay in the text (the starter allows them in free text) but are not word
+        // characters to a mention or quick action parser, so both are looked for with and without them.
+        for (String seen : new String[] {text, INVISIBLE_JOINERS.matcher(text).replaceAll("")}) {
+            if (QUICK_ACTION.matcher(seen).find()) {
+                throw new InvalidToolArgumentException("body must not contain a line starting with '/': GitLab would "
+                        + "run it as a quick action");
+            }
+            if (MENTION_ALL.matcher(seen).find() || MENTION_ALL.matcher(decodedCharacterReferences(seen)).find()) {
+                throw new InvalidToolArgumentException("body must not mention @all: it notifies every member of the project");
+            }
         }
         return text;
     }

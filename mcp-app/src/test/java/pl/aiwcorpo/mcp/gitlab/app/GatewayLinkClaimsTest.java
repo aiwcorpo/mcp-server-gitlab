@@ -17,7 +17,7 @@ class GatewayLinkClaimsTest extends ServerTestSupport {
     @Test
     void aCallThroughALinkWithoutNarrowingIsServed() {
         try (McpSyncClient client = clientAs(
-                user -> user.username("jkowalski").virtualServer("team-a-review", Map.of()),
+                user -> { reader(user); user.virtualServer("team-a-review", Map.of()); },
                 "Bearer glpat-jkowalski-7f3a", BackendCredential.Type.USER_SECRET)) {
             McpSchema.CallToolResult result = call(client, "get_merge_request", Map.of("project", "team-a/app", "iid", 1));
 

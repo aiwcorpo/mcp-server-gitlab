@@ -84,13 +84,14 @@ class GitLabArgumentsTest {
 
     @Test
     void commentBodyIsCheckedAsNormalizedAndSentAsNormalized() {
-        // ZWNJ, ZWJ, LRM and RLM pass the starter's free-text rule; normalization turns them into a space or drops
-        // them at the edge of the text, and the checks run on that result.
+        // ZWNJ, ZWJ, LRM and RLM pass the starter's free-text rule and stay in the text; the checks look at the text
+        // with and without them, so they do not hide a quick action or a mention.
         for (String bad : new String[] {"\u200D/merge", "ok\n\u200F /approve", "@all\u200D", "cc\u200C@all", "x\r\n/close"}) {
             assertThatThrownBy(() -> GitLabArguments.commentBody(bad)).as(bad).isInstanceOf(InvalidToolArgumentException.class);
         }
-        assertThat(GitLabArguments.commentBody("@a\u200Cll")).isEqualTo("@a ll");
-        assertThat(GitLabArguments.commentBody("x\r\ny")).isEqualTo("x\ny");
+        assertThat(GitLabArguments.commentBody("x\u200Dy")).isEqualTo("x\u200Dy");
+        assertThatThrownBy(() -> GitLabArguments.commentBody("@a\u200Cll")).isInstanceOf(InvalidToolArgumentException.class);
+        assertThat(GitLabArguments.commentBody("x\r\ny")).as("CRLF stays").isEqualTo("x\r\ny");
         for (String bad : new String[] {"a\u200Bb", "a\u2060b", "a\uFEFFb", "a\u202Eb"}) {
             assertThatThrownBy(() -> GitLabArguments.commentBody(bad)).as(bad).isInstanceOf(InvalidToolArgumentException.class);
         }

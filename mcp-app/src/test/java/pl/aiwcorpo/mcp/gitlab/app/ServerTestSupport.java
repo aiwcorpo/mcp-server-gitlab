@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -34,6 +35,8 @@ abstract class ServerTestSupport {
 
     static final String SERVER_ID = "mcp-gitlab";
     static final String SYSTEM = "gitlab";
+    static final String READ_GROUP = "mcp-gitlab-read";
+    static final String WRITE_GROUP = "mcp-gitlab-write";
 
     /** True only for a system outside the contracts' SystemId; gitlab is on the list, so it is false. */
     static final boolean TRIAL_SYSTEM = false;
@@ -67,7 +70,12 @@ abstract class ServerTestSupport {
 
     /** Same, with {@code X-MCP-Credential-Type} set to {@code type}: GitLab is also connected through OAuth. */
     McpSyncClient clientWithCredential(String credential, BackendCredential.Type type) {
-        return clientAs(user -> user.username("jkowalski"), credential, type);
+        return clientAs(ServerTestSupport::reader, credential, type);
+    }
+
+    /** The caller of most tests: a member of the read and write groups of the system (C9). */
+    static void reader(TestGateway.Token user) {
+        user.username("jkowalski").groups(List.of(READ_GROUP, WRITE_GROUP));
     }
 
     /** Same, with the JWT claims of the caller set by {@code user} (a call through a link carries {@code vs}). */

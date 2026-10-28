@@ -10,6 +10,7 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.RepositoryFile;
 import pl.aiwcorpo.mcp.gitlab.core.port.in.GitLabUseCase;
 import pl.aiwcorpo.mcp.platform.guard.RiskLevel;
 import pl.aiwcorpo.mcp.platform.guard.ToolRisk;
+import pl.aiwcorpo.mcp.platform.guard.ToolTitle;
 import pl.aiwcorpo.mcp.platform.input.ArgumentLimits;
 
 /**
@@ -31,6 +32,7 @@ public class GitLabTools {
             + "project its path, name, description, default branch, archived flag, last activity and web URL, and "
             + "whether more projects exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("Lista projektów grupy")
     public ProjectList listProjects(
             @ToolParam(description = "Full path of the group, e.g. team-a or team-a/sub")
             @ArgumentLimits(contractPattern = "GitLabGroupPath", minLength = 1) String group) {
@@ -41,6 +43,7 @@ public class GitLabTools {
             + "or commit: project path, file path, ref, commit id, size in bytes and the content. Binary files and "
             + "files over the size limit are refused without content.")
     @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("Pobierz plik z repozytorium")
     public RepositoryFile getFile(
             @ToolParam(description = "Full path of the project, e.g. team-a/app")
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3) String project,
@@ -56,6 +59,7 @@ public class GitLabTools {
             + "(iid): title, description, state, draft flag, source and target branch, author, assignees, "
             + "reviewers, labels, timestamps, merge status, conflict flag and web URL.")
     @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("Pobierz merge request")
     public MergeRequest getMergeRequest(
             @ToolParam(description = "Full path of the project, e.g. team-a/app")
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3) String project,
@@ -68,13 +72,14 @@ public class GitLabTools {
             + "the calling user. Lines starting with '/' (GitLab quick actions) are refused. Returns the project, "
             + "the merge request number, the new comment's id, its author and creation time.")
     @ToolRisk(RiskLevel.UPDATE)
+    @ToolTitle("Dodaj komentarz do merge requesta")
     public MergeRequestNote commentMergeRequest(
             @ToolParam(description = "Full path of the project, e.g. team-a/app")
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3) String project,
             @ToolParam(description = "Number of the merge request within the project (iid)")
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
             @ToolParam(description = "Text of the comment, Markdown")
-            @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.BODY_MAX_LENGTH) String body) {
+            @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.BODY_MAX_LENGTH, mentionFiltered = true) String body) {
         return gitlab.commentMergeRequest(GitLabArguments.project(project), GitLabArguments.iid(iid),
                 GitLabArguments.commentBody(body));
     }
