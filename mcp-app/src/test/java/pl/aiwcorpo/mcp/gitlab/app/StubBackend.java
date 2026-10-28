@@ -65,7 +65,8 @@ final class StubBackend {
             "locked", new Group(40, "locked", null, 403),
             "locked/inner", new Group(41, "locked/inner", "[]", 200),
             "broken-parent", new Group(50, "broken-parent", null, 500),
-            "broken-parent/inner", new Group(51, "broken-parent/inner", null, 200));
+            "broken-parent/inner", new Group(51, "broken-parent/inner", null, 200),
+            "legal", new Group(70, "legal", null, 200));
 
     static final Map<String, Project> PROJECTS = Map.of(
             "hr/payroll/team/app", new Project(60, "hr/payroll/team/app", "[]", 22, 200),
@@ -73,7 +74,8 @@ final class StubBackend {
             "team-a/secret-plans", new Project(62, "team-a/secret-plans", "[\"RESTRICTED\"]", 7, 200),
             "team-a/sub/deep", new Project(63, "team-a/sub/deep", "[\"backend\"]", 8, 200),
             "locked/inner/app", new Project(64, "locked/inner/app", "[]", 41, 200),
-            "broken-parent/inner/app", new Project(65, "broken-parent/inner/app", "[]", 51, 200));
+            "broken-parent/inner/app", new Project(65, "broken-parent/inner/app", "[]", 51, 200),
+            "legal/app", new Project(66, "legal/app", "[]", 70, 200));
 
     private static final Pattern PROJECT_CHILD = Pattern.compile("/api/v4/projects/(\\d+)/(.+)");
     private static final Map<String, byte[]> FILES = Map.of(

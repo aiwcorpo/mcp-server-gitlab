@@ -105,6 +105,10 @@ Uruchomienie wg README: profil `dev` na 18520, health 200, `POST /mcp` bez JWT 4
 - Smoke na hoście (port 18520, profil `dev` wg README): health 200, `POST /mcp` bez JWT 401; proces zatrzymany.
   Wariant mTLS (certyfikat `certs/mcp-gitlab`, Redis `mcp-gitlab`) sprawdzony w rundzie 1 na alpha-5.
 
+## Znana luka: restricted na grupie nie działa
+
+API v4 GitLaba nie ma `topics` dla grup, więc na prawdziwej instancji `classification` grupy i `ancestorClassifications` są puste i oznaczenie `restricted` na grupie nic nie zamyka. Brak topics grupy nie jest zamieniany na odmowę (zablokowałoby cały GitLab). Do decyzji o źródle klasyfikacji grup (Propozycje CC 1). Topics projektów działają. Test dokumentujący: `ResourcePolicyTest.knownGapAGroupThatReportsNoTopicsIsNotRestrictedWhateverItIsMeantToProtect`. Mechanika (mapa przodków, zamknięcie poddrzewa) jest sprawdzona na stubie, który podaje `topics` grupy.
+
 ## M3: zasoby, polityki, manifest
 
 Kamienie: (1) przejście na beta-2 (alpha-12..14 i beta-1 w jednym kroku: wersja BOM, tytuły, `policy.*` i `manifest.*`,

@@ -209,4 +209,21 @@ class ResourcePolicyTest extends ServerTestSupport {
             assertThat(text(result)).contains("team-a/app").doesNotContain("finance/secret", "secret-plans");
         }
     }
+
+    /**
+     * Documents a known gap, not a wanted behaviour. GitLab's API has no topics for groups (only projects have them), so a
+     * real group answers without the field and the server reads that as "no classification". Marking a group restricted
+     * therefore does nothing until the contract names another source for group classification (STATUS, Propozycje CC 1).
+     * Topics of projects work (see aProjectIsRestrictedByItsOwnTopicWhateverTheCase). When the source is decided, this
+     * test changes together with the resolver.
+     */
+    @Test
+    void knownGapAGroupThatReportsNoTopicsIsNotRestrictedWhateverItIsMeantToProtect() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            McpSchema.CallToolResult result = call(client, "list_projects", Map.of("group", "legal"));
+
+            assertThat(result.isError()).isFalse();
+            assertThat(text(result)).contains("legal/app");
+        }
+    }
 }

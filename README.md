@@ -98,7 +98,7 @@ poddrzewem `hr`. Rodzic projektu (grupa) dostaje swoją mapę bez siebie.
   jest potrzebny, bo GitLab sam stosuje prawa użytkownika, a zakres jest argumentem zasobowym. Ścieżka każdego
   projektu w wyniku to `@ResourceRef`: projekty z `restricted` w topics (własnych lub grup nad nimi) znikają z listy,
   bez błędu. Wynik nie ma licznika od GitLaba (`truncated` mówi tylko, że jest następna strona w GitLabie).
-- Źródło topics: GitLab zwraca `topics` dla projektów. Dla grup API v4 pola `topics` nie ma; serwer czyta je, jeśli
+- Znana luka: restricted na grupie nie działa do decyzji o źródle klasyfikacji grup. GitLab zwraca `topics` dla projektów. Dla grup API v4 pola `topics` nie ma; serwer czyta je, jeśli
   instancja je poda (mock, rozszerzenie), a brak pola traktuje jako brak klasyfikacji. Patrz STATUS, "Propozycje CC".
 
 ## Jak przechodzi wywołanie
