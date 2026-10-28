@@ -8,7 +8,7 @@ import pl.aiwcorpo.mcp.platform.test.TestGateway;
 
 /**
  * The dev profile (test keys, no mTLS) does not start on an address other machines can reach. The check is the
- * starter's (3.0.0-alpha-6); this test keeps it from disappearing unnoticed.
+ * starter's (since 3.0.0-alpha-6); this test keeps it from disappearing unnoticed.
  */
 class DevProfileLoopbackTest {
 
