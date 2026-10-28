@@ -55,7 +55,7 @@ class GetMergeRequestToolTest extends ServerTestSupport {
                     .doesNotContain("projectId", "avatar_url", "diff_refs", "Anna Nowak");
         }
         assertThat(BACKEND.requests()).extracting(StubBackend.Seen::rawPath)
-                .containsExactly("/api/v4/projects/team-a%2Fapp", "/api/v4/groups/team-a",
+                .containsExactly("/api/v4/projects/team-a%2Fapp",
                         "/api/v4/projects/42/merge_requests/1");
     }
 

@@ -8,9 +8,8 @@ import java.util.function.Supplier;
 import pl.aiwcorpo.mcp.platform.resource.ResourceContext;
 
 /**
- * Answers of GitLab that are kept for the duration of one tool call. The policy needs the topics of every group on
- * the path of every project of a result, and projects of one group share all of them, so without this a listing of
- * 100 projects would ask GitLab for the same ancestors 100 times.
+ * Answers of GitLab that are kept for the duration of one tool call: the group of a listing and its page of projects,
+ * which the listing and the resolution of its elements both need.
  *
  * <p>The entries hang on the {@link ResourceContext} the platform opens around each call and are dropped with it.
  * Outside a call (no context) nothing is kept. A failed load is not kept.

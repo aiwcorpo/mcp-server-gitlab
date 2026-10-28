@@ -16,8 +16,8 @@ Tytuły (`@ToolTitle`): `list_projects` - "Lista projektów grupy", `get_file` -
 
 Zasoby C7 (`@ResourceRef`): `group` -> `GitLab::Group` (`list_projects`), `project` -> `GitLab::Project` (pozostałe;
 merge request nie jest typem zasobu kontraktu). Identyfikator i rodzic zasobu to `full_path`/`path_with_namespace`
-zwrócone przez GitLaba, nigdy argument; atrybuty: `classification` (topics zasobu) i `ancestorClassifications`
-(topics wszystkich grup nad zasobem, `{}` dla grupy najwyższego poziomu). Elementy wyniku `list_projects` (`path`) są
+zwrócone przez GitLaba, nigdy argument; atrybuty: `classification` (topics projektu; grupa zawsze `[]`, klasyfikujemy tylko projekty) i
+`ancestorClassifications` (każda grupa nad zasobem z `[]`, `{}` dla grupy najwyższego poziomu). Elementy wyniku `list_projects` (`path`) są
 `@ResourceRef` typu `GitLab::Project`: zastrzeżone znikają z listy.
 
 Wyniki: tekst pisany przez użytkowników GitLaba jest obiektem `UntrustedText` (CC-072):

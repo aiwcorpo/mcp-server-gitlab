@@ -35,7 +35,6 @@ class GetFileToolTest extends ServerTestSupport {
         assertThat(BACKEND.requests()).extracting(seen -> seen.method() + " " + seen.rawPath() + "?" + seen.rawQuery())
                 .containsExactly(
                         "GET /api/v4/projects/TEAM-A%2Fold-app?null",
-                        "GET /api/v4/groups/team-a?with_projects=false",
                         "HEAD /api/v4/projects/42/repository/files/docs%2Fguide.md?ref=v1.0",
                         "GET /api/v4/projects/42/repository/files/docs%2Fguide.md/raw?ref=" + StubBackend.COMMIT);
     }

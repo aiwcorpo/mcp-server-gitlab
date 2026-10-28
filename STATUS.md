@@ -1,6 +1,6 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
-M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-2 (kontrakty 3.1.0), `@ToolTitle` na 4 narzędziach, `@ResourceRef` na `group` i `project`, resolvery `GitLab::Group` i `GitLab::Project` z `classification` i `attrs.ancestorClassifications` (cache na czas wywołania, `fetchAll` przy listach), `ResultFilter` na `list_projects`, `GET /mcp-manifest` zgodny z `tools/list`, 99 testów (mcp-app 82, mcp-tools 10, mcp-application 7). Nie sprawdzone na działającym GitLabie ani w mcp-platform-dev (patrz Propozycje CC 1).
+M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-2 (kontrakty 3.1.0), `@ToolTitle` na 4 narzędziach, `@ResourceRef` na `group` i `project`, resolvery `GitLab::Group` i `GitLab::Project` z `classification` (tylko projekty) i `attrs.ancestorClassifications` ze ścieżki zasobu (bez wywołań API), `fetchAll` i cache na czas wywołania przy listach, `ResultFilter` na `list_projects`, `GET /mcp-manifest` zgodny z `tools/list`, 95 testów (mcp-app 78, mcp-tools 10, mcp-application 7). Nie sprawdzone na działającym GitLabie ani w mcp-platform-dev.
 
 M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 78 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
 
@@ -105,9 +105,14 @@ Uruchomienie wg README: profil `dev` na 18520, health 200, `POST /mcp` bez JWT 4
 - Smoke na hoście (port 18520, profil `dev` wg README): health 200, `POST /mcp` bez JWT 401; proces zatrzymany.
   Wariant mTLS (certyfikat `certs/mcp-gitlab`, Redis `mcp-gitlab`) sprawdzony w rundzie 1 na alpha-5.
 
-## Znana luka: restricted na grupie nie działa
+## Decyzja: klasyfikujemy tylko projekty (2026-10-28)
 
-API v4 GitLaba nie ma `topics` dla grup, więc na prawdziwej instancji `classification` grupy i `ancestorClassifications` są puste i oznaczenie `restricted` na grupie nic nie zamyka. Brak topics grupy nie jest zamieniany na odmowę (zablokowałoby cały GitLab). Do decyzji o źródle klasyfikacji grup (Propozycje CC 1). Topics projektów działają. Test dokumentujący: `ResourcePolicyTest.knownGapAGroupThatReportsNoTopicsIsNotRestrictedWhateverItIsMeantToProtect`. Mechanika (mapa przodków, zamknięcie poddrzewa) jest sprawdzona na stubie, który podaje `topics` grupy.
+API v4 GitLaba nie ma `topics` dla grup, więc człowiek zdecydował, że w GitLabie oznaczamy wyłącznie projekty.
+Klasyfikacja grupy jest zawsze pusta (serwer nie czyta `topics` z odpowiedzi grupy), a `ancestorClassifications`
+powstaje ze ścieżki zasobu (każda grupa-przodek z `[]`), bez wywołań API. `restricted` na grupie nie zamyka poddrzewa,
+`restricted` na projekcie zamyka projekt. Testy: `ResourcePolicyTest.aGroupIsNotClassifiedEvenWhenGitLabReportsTopicsForIt`,
+`theGroupsAboveAProjectAreNeverAskedAbout`, `aGroupAboveThatGitLabHidesOrFailsDoesNotChangeTheAnswer`,
+`aProjectIsRestrictedByItsOwnTopicWhateverTheCase`.
 
 ## M3: zasoby, polityki, manifest
 
@@ -119,8 +124,8 @@ higiena tekstu beta-1), (2) resolvery i `@ResourceRef`, (3) testy polityki i man
 | Konfiguracja | `policy.main.*`, `policy.state-dir`, `manifest.*` w `application.yml` (zmienne `MCP_POLICY_*`, `MCP_INTERNAL_URL`); `dev`: paczka z `127.0.0.1:18747` i klucz testowy z `mcp-policies/keys/dev`, `allow-test-keys` tylko w `dev` (`ProductionConfigurationTest`) |
 | Higiena tekstu beta-1 | ZWNJ/ZWJ/LRM/RLM i CRLF zostają w treści komentarza; kontrole quick action i `@all` robione na tekście z nimi i bez nich (fail-closed); `body` ma `mentionFiltered = true`. Zmienione testy: `@a<ZWNJ>ll` jest teraz odrzucane, CRLF idzie do GitLaba bez zmian |
 | Zasoby | `GitLab::Group` (`list_projects`) i `GitLab::Project` (reszta); merge request nie jest typem zasobu kontraktu, jest adresowany przez projekt i `iid` |
-| Atrybuty | `classification` z `topics`; `ancestorClassifications` dokładnie dla grup nad zasobem (projekt: z rodzicem; rodzic projektu: bez siebie; grupa najwyższego poziomu `{}`); `AncestorLookup`, `GitLabGroupResolver`, `GitLabProjectResolver` |
-| Cache na wywołanie | `CallCache` w adapterze, klucz: `ResourceContext` wywołania (WeakHashMap), wielkość liter pomijana; obejmuje `findGroup` i stronę projektów grupy |
+| Atrybuty | `classification`: topics projektu, grupa zawsze `[]`; `ancestorClassifications` ze ścieżki, dokładnie grupy nad zasobem, każda z `[]` (projekt: z rodzicem; rodzic projektu: bez siebie; grupa najwyższego poziomu `{}`); `AncestorLookup`, `GitLabGroupResolver`, `GitLabProjectResolver` |
+| Cache na wywołanie | `CallCache` w adapterze, klucz: `ResourceContext` wywołania (WeakHashMap), wielkość liter pomijana; obejmuje `findGroup` i stronę projektów grupy (przodkowie nie wymagają wywołań) |
 | Listy | `ProjectSummary.path` jest `@ResourceRef`; `fetchAll` bierze projekty ze strony grupy (1 wywołanie na grupę), awaryjnie `GET /projects/:path` |
 | Wyszukiwanie | `list_projects(group)`: zakres to `@ResourceRef` grupy (link zawęża przez politykę), zapytanie buduje serwer (id grupy, stałe parametry); `StructuredQuery`/`QueryScope` nie są użyte, bo GitLab nie ma języka zapytań w tym narzędziu |
 | Manifest | `ManifestTest`: reguły bramy, definicje = `tools/list`, `definitionHash`, `resourceRefs`, ryzyko |
@@ -170,15 +175,9 @@ Uruchomienie z mcp-platform-dev nie było sprawdzane: mock GitLaba (`mocks/syste
 
 ## Propozycje CC
 
-1. Źródło klasyfikacji grupy GitLaba (C7, CC-129). API v4 GitLaba nie ma `topics` dla grup (są tylko dla projektów),
-   a kontrakt zakłada "topics grupy". Serwer czyta pole `topics` z odpowiedzi `GET /groups/:id`, jeśli jest, a brak
-   traktuje jako brak klasyfikacji. Na prawdziwym GitLabie `restricted` na grupie nie zadziała, dopóki kontrakt nie
-   wskaże źródła: np. etykieta w opisie grupy, atrybut własny grupy (wymaga admina), albo konwencja nazwy. Do decyzji
-   człowieka. Dotyczy też mocka ws-01: potrzebuje `topics` na grupach, żeby demo M3 pokazało zamknięcie poddrzewa.
-2. Niewidoczny przodek (C7). Użytkownik będący tylko członkiem podgrupy może nie widzieć grupy nadrzędnej (404/403).
-   Serwer traktuje wtedy zasób jak nieistniejący, bo nie zna topics ukrytej grupy. Alternatywa wymaga konta serwisowego
-   do odczytu topics przodków (poza modelem poświadczeń użytkownika); do rozstrzygnięcia.
-3. Brak innych zmian kontraktu. Kształt `UntrustedText` (CC-072) to od alpha-7 typ startera; pole `origin` zniknęło z wyniku.
+1. Zamknięta decyzją człowieka (2026-10-28): w GitLabie klasyfikujemy tylko projekty (patrz wyżej). Kontrakt (entity-builder:
+   "topics samej grupy") mówi o grupie; do uzgodnienia w opisie, że dla GitLaba `classification` grupy jest zawsze puste.
+2. Zamknięta tą samą decyzją: niewidoczny przodek nie ma znaczenia, bo przodków nie pytamy.
 
 ## Runda 4: poprawki przeglądu alpha-10 (2026-10-28)
 

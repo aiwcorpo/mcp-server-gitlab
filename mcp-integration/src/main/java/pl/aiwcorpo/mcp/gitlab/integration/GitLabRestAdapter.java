@@ -105,7 +105,11 @@ public class GitLabRestAdapter implements GitLabPort {
                 .build();
     }
 
-    /** GitLab paths ignore case, so the cache does too: {@code Team-A} and {@code team-a} are one lookup. */
+    /**
+     * Groups are not classified (decision of 2026-10-28): only projects carry topics, so a group's own classification is
+     * always empty and any {@code topics} GitLab might send for a group are not read.
+     *
+     * GitLab paths ignore case, so the cache does too: {@code Team-A} and {@code team-a} are one lookup. */
     @Override
     public Optional<GitLabGroup> findGroup(String fullPath) {
         return callCache.get("group:" + fullPath.toLowerCase(Locale.ROOT), () -> {
@@ -115,7 +119,7 @@ public class GitLabRestAdapter implements GitLabPort {
                     .headers(headers -> GitLabCredentials.apply(credential, headers))
                     .retrieve()
                     .body(GroupResponse.class))
-                    .map(group -> new GitLabGroup(group.id(), required(group.fullPath()), reportedTopics(group.topics())));
+                    .map(group -> new GitLabGroup(group.id(), required(group.fullPath()), List.of()));
         });
     }
 
@@ -285,7 +289,7 @@ public class GitLabRestAdapter implements GitLabPort {
     // because GitLab leaves out fields a representation does not have (e.g. archived on a single project).
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record GroupResponse(long id, @JsonProperty("full_path") String fullPath, List<String> topics) {
+    record GroupResponse(long id, @JsonProperty("full_path") String fullPath) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

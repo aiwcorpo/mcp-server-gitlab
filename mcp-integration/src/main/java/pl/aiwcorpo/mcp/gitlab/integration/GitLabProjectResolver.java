@@ -19,7 +19,7 @@ import pl.aiwcorpo.mcp.platform.resource.ResourceResolver;
 /**
  * Tells the starter what a project path is: for an argument and for every project of a listing. The project and its
  * parent group are described as GitLab reports them (canonical path, topics), so a project moved to another group is
- * judged by the group it is in now, and every group on the path contributes its topics (CC-129).
+ * judged by the group it is in now. Only projects carry topics; every group on the path is listed with an empty one (CC-129).
  */
 @Component
 public class GitLabProjectResolver implements ResourceResolver<GitLabProjectResource> {
@@ -28,11 +28,8 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
     static final String GROUP_TYPE = "GitLab::Group";
 
     private final GitLabPort gitlab;
-    private final AncestorLookup ancestors;
-
-    GitLabProjectResolver(GitLabPort gitlab, AncestorLookup ancestors) {
+    GitLabProjectResolver(GitLabPort gitlab) {
         this.gitlab = gitlab;
-        this.ancestors = ancestors;
     }
 
     @Override
@@ -42,7 +39,7 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
 
     @Override
     public Optional<GitLabProjectResource> fetch(String path) {
-        return gitlab.findProject(path).flatMap(this::withAncestors);
+        return gitlab.findProject(path).map(GitLabProjectResolver::withAncestors);
     }
 
     /**
@@ -68,14 +65,15 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
         Map<String, GitLabProjectResource> fetched = new LinkedHashMap<>();
         for (String path : paths) {
             GitLabProject project = listed.get(path.toLowerCase(Locale.ROOT));
-            Optional<GitLabProjectResource> resource = project != null ? withAncestors(project) : fetch(path);
+            Optional<GitLabProjectResource> resource = project != null
+                    ? Optional.of(withAncestors(project)) : fetch(path);
             resource.ifPresent(found -> fetched.put(path, found));
         }
         return fetched;
     }
 
-    private Optional<GitLabProjectResource> withAncestors(GitLabProject project) {
-        return ancestors.above(project.pathWithNamespace()).map(above -> new GitLabProjectResource(project, above));
+    private static GitLabProjectResource withAncestors(GitLabProject project) {
+        return new GitLabProjectResource(project, AncestorLookup.above(project.pathWithNamespace()));
     }
 
     @Override

@@ -12,7 +12,8 @@ import pl.aiwcorpo.mcp.platform.resource.ResourceResolver;
 
 /**
  * Tells the starter what a group path is before the tool runs: GitLab is asked with the caller's own credential, the
- * answer is described for the policy with the canonical path and the topics of every group above it.
+ * answer is described for the policy with the canonical path. Groups are not classified, so the classification is empty and
+ * every group above is listed with an empty one.
  */
 @Component
 public class GitLabGroupResolver implements ResourceResolver<GitLabGroupResource> {
@@ -20,11 +21,8 @@ public class GitLabGroupResolver implements ResourceResolver<GitLabGroupResource
     static final String TYPE = "GitLab::Group";
 
     private final GitLabPort gitlab;
-    private final AncestorLookup ancestors;
-
-    GitLabGroupResolver(GitLabPort gitlab, AncestorLookup ancestors) {
+    GitLabGroupResolver(GitLabPort gitlab) {
         this.gitlab = gitlab;
-        this.ancestors = ancestors;
     }
 
     @Override
@@ -34,11 +32,7 @@ public class GitLabGroupResolver implements ResourceResolver<GitLabGroupResource
 
     @Override
     public Optional<GitLabGroupResource> fetch(String path) {
-        Optional<GitLabGroup> group = gitlab.findGroup(path);
-        if (group.isEmpty()) {
-            return Optional.empty();
-        }
-        return ancestors.above(group.get().fullPath()).map(above -> new GitLabGroupResource(group.get(), above));
+        return gitlab.findGroup(path).map(group -> new GitLabGroupResource(group, AncestorLookup.above(group.fullPath())));
     }
 
     @Override

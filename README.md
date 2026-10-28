@@ -77,29 +77,25 @@ Poświadczenie wg `X-MCP-Credential-Type`: `user-secret` (PAT, schemat `Bearer` 
 
 Przed metodą narzędzia starter pyta GitLaba poświadczeniem użytkownika (`GitLabGroupResolver`,
 `GitLabProjectResolver`) i ocenia politykę Cedar z podpisanej paczki (ta sama co w gateway'u) na zasobie takim,
-jakim opisuje go GitLab: kanoniczna ścieżka, własne topics (`classification`), a dla grupy i projektu
-`attrs.ancestorClassifications`, czyli mapa `<ścieżka grupy-przodka> -> topics` dokładnie dla grup nad zasobem
-(dla `hr/payroll/team/app`: `hr`, `hr/payroll`, `hr/payroll/team`; dla grupy najwyższego poziomu `{}`). Topics w
-GitLabie się nie dziedziczą, więc `restricted` na grupie `hr` zamyka całe poddrzewo; grupa `hr-eu` nie jest
-poddrzewem `hr`. Rodzic projektu (grupa) dostaje swoją mapę bez siebie.
+jakim opisuje go GitLab: kanoniczna ścieżka i `classification`.
 
-- Brak zasobu, 403 z GitLaba, `restricted` (na zasobie albo grupie nad nim) i zasób poza zakresem linku
-  (`vsScopes.gitlabGroups`) dają ten sam `not_found_or_denied` z tym samym tekstem. Brak grupy narzędzia to
-  `access_denied`, awaria GitLaba przy odczycie przodka to błąd systemu, nie odmowa.
-- Grupa-przodek niewidoczna dla użytkownika (404/403): jej topics są nieznane, a ukryta grupa może być zastrzeżona,
-  więc zasób jest traktowany jak nieistniejący (fail-closed).
-- Pobranie przodków to jedno `GET /groups/:path` na grupę na ścieżce; odpowiedzi są pamiętane do końca wywołania
-  (`CallCache`, klucz: kontekst wywołania startera, wielkość liter pomijana). `list_projects` czyta stronę projektów
-  grupy raz; `ResultFilter` rozwiązuje wszystkie wyniki jednym `fetchAll`, który bierze projekty z tej strony zamiast
-  `GET /projects/:path` na każdy.
+Decyzja (2026-10-28): w GitLabie klasyfikujemy tylko projekty. `classification` projektu to jego `topics`.
+`classification` grupy jest zawsze pusta (serwer nie czyta `topics` z odpowiedzi grupy; API v4 ich dla grup nie ma).
+`attrs.ancestorClassifications` powstaje ze ścieżki kanonicznej zasobu: każda grupa-przodek z pustą listą (dla
+`hr/payroll/team/app`: `hr`, `hr/payroll`, `hr/payroll/team`; dla grupy najwyższego poziomu `{}`; rodzic projektu
+dostaje mapę bez siebie). Nie ma wywołań API po przodków, więc grupa nadrzędna niewidoczna dla użytkownika niczego nie
+zmienia. Skutek: `restricted` na grupie nie zamyka jej poddrzewa; zamyka tylko projekt z tym topikiem.
+
+- Brak zasobu, 403 z GitLaba, projekt z `restricted` w topics i zasób poza zakresem linku (`vsScopes.gitlabGroups`)
+  dają ten sam `not_found_or_denied` z tym samym tekstem. Brak grupy narzędzia to `access_denied`.
+- Odpowiedzi GitLaba (grupa listingu i strona jej projektów) są pamiętane do końca wywołania (`CallCache`, klucz:
+  kontekst wywołania startera, wielkość liter pomijana). `list_projects` czyta stronę projektów grupy raz; `ResultFilter`
+  rozwiązuje wyniki jednym `fetchAll`, który bierze projekty z tej strony zamiast `GET /projects/:path` na każdy.
 - `list_projects` jest wyszukiwaniem w zakresie jednej grupy: serwer buduje zapytanie (id grupy, `with_shared=false`,
   `include_subgroups=false`, 100 na stronę), model podaje tylko grupę. Grupa jest `@ResourceRef`, więc zawężenie linku
   działa przez politykę (grupa spoza linku to `not_found_or_denied`, bez ujawniania, że istnieje); `QueryScope` nie
-  jest potrzebny, bo GitLab sam stosuje prawa użytkownika, a zakres jest argumentem zasobowym. Ścieżka każdego
-  projektu w wyniku to `@ResourceRef`: projekty z `restricted` w topics (własnych lub grup nad nimi) znikają z listy,
-  bez błędu. Wynik nie ma licznika od GitLaba (`truncated` mówi tylko, że jest następna strona w GitLabie).
-- Znana luka: restricted na grupie nie działa do decyzji o źródle klasyfikacji grup. GitLab zwraca `topics` dla projektów. Dla grup API v4 pola `topics` nie ma; serwer czyta je, jeśli
-  instancja je poda (mock, rozszerzenie), a brak pola traktuje jako brak klasyfikacji. Patrz STATUS, "Propozycje CC".
+  jest potrzebny. Ścieżka każdego projektu w wyniku to `@ResourceRef`: projekty z `restricted` w topics znikają z
+  listy, bez błędu. `truncated` mówi tylko, że GitLab ma następną stronę.
 
 ## Jak przechodzi wywołanie
 
@@ -238,7 +234,7 @@ handshake'u. Pełne wywołanie narzędzia wymaga gateway'a z hosta (`mcp-gateway
 | `DevProfileLoopbackTest` | `dev` na `0.0.0.0` nie wstaje |
 | `GatewayOnlyAccessTest` | bez JWT 401 (`tools/call`, `ping`, `initialize`), JWT dla innego serwera, innego narzędzia, wariant serwisowy i przeterminowany -> 401; bez JWT tylko health |
 | `GitLabArgumentsTest` (mcp-tools) | wektory `resource-ids/gitlab-*.json` z kontraktu, limit ścieżki = limit kontraktu, ścieżka pliku, ref, iid, quick actions, `@all` |
-| `ResourcePolicyTest` | projekt trzy poziomy pod grupą `restricted` i pośrednie grupy -> `not_found_or_denied` identyczne jak dla nieistniejącego; `hr-eu` nie jest zamknięte przez `hr`; własne topics projektu; lista bez projektu zastrzeżonego i obcego; przodkowie raz na wywołanie; grupa najwyższego poziomu `{}`; ukryty i awaryjny przodek; `access_denied` bez grupy; zawężenie linku do podgrupy; zakres zapisu |
+| `ResourcePolicyTest` | projekt z topikiem `restricted` -> `not_found_or_denied` identyczne jak dla nieistniejącego (odczyt i zapis); grupa nie jest klasyfikowana, także gdy GitLab poda dla niej topics (`hr`, `hr/payroll/team`); brak wywołań po grupy-przodków; lista bez projektu zastrzeżonego i obcego; `access_denied` bez grupy; zawężenie linku do podgrupy; zakres zapisu |
 | `ManifestTest` | `/mcp-manifest` przechodzi `ManifestRules`, definicje = `tools/list`, `definitionHash`, tytuły, zamknięte schematy, `resourceRefs` i ryzyko |
 | `GitLabServiceTest` (mcp-application) | filtr przestrzeni nazw, odczyt przy commicie, limity, wykrywanie binariów, merge request innego projektu |
 
