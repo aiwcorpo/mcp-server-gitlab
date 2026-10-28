@@ -2,7 +2,7 @@
 
 M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 78 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
 
-Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-10` (kontrakty 2.1.1, Spring Boot 4.1.0, Spring AI
+Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-alpha-11` (kontrakty 2.1.1, Spring Boot 4.1.0, Spring AI
 2.0.0, Java 25). M2 nie jest zaczęty (manifest C6, `@ResourceRef`, `ResultFilter`).
 
 ## Runda 2: znaleziska recenzji M1
@@ -164,3 +164,7 @@ Brak. Kształt `UntrustedText` (CC-072) to od alpha-7 typ startera; pole `origin
 | G3-L1 brak testu, że do GitLaba idzie treść znormalizowana | poprawione | `CommentMergeRequestToolTest.gitLabReceivesTheNormalizedBodyNotTheOneTheModelSent` (CRLF -> LF w ciele POST) |
 | G3-L2 `get_file` gubi znaki bidi bez śladu | poprawione wariantem pola systemu: `hiddenCharactersRemoved` (liczba usuniętych znaków sterujących, niewidocznych i zmieniających kierunek, liczona na całym pliku przed cięciem); treść nadal oczyszczona, `truncated` bez zmian; opis w README i `tools-catalog.md`. Odrzucone: zamiana na widoczny znacznik (zmieniałaby kod, który model cytuje) | `GetFileToolTest.invisibleCharactersAreCountedBecauseTheyDisappearFromTheContent` |
 | A10-M1 `DevProfileLoopbackTest` | bez zmian, rozwiąże starter alpha-11 | |
+
+## Runda 5: starter alpha-11 (2026-10-28)
+
+BOM alpha-10 -> alpha-11 (MIGRATION-3.0.md, sekcja "Zmiany w 3.0.0-alpha-11"). `DevProfileLoopbackTest` sprawdza regułę guarda przez `DevProfileGuardAssertions.assertDevProfileLoopbackRule()` (A10-M1), więc przechodzi także w kontenerze CI. `./mvnw clean verify`: 78 testów, 0 błędów; `INVOCATION_ID=ci ./mvnw -B verify`: bez różnic. Start lokalny w profilu `dev`: health 200, POST /mcp bez JWT 401.
