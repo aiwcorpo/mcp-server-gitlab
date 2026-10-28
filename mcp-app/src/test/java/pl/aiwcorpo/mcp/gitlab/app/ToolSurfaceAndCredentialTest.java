@@ -144,9 +144,7 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
                 McpSyncClient basic = clientWithCredential("Basic amtvd2Fsc2tpOnNlY3JldA==", BackendCredential.Type.USER_SECRET);
                 McpSyncClient oauthAsApiKey = clientWithCredential("ApiKey gloas-oauth", BackendCredential.Type.USER_OAUTH)) {
             for (McpSyncClient client : List.of(serviceAccount, basic, oauthAsApiKey)) {
-                McpSchema.CallToolResult result = call(client, "get_file", README);
-                assertThat(result.isError()).isTrue();
-                assertThat(text(result)).contains("\"error\":\"internal_error\"");
+                assertCredentialRequired(call(client, "get_file", README));
             }
         }
         assertThat(BACKEND.requests()).isEmpty();

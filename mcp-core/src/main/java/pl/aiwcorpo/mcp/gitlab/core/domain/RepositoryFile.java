@@ -7,7 +7,7 @@ import pl.aiwcorpo.mcp.platform.text.UntrustedText;
  *
  * @param project  canonical project path
  * @param path     path of the file
- * @param ref      the ref the caller asked for (or the default branch)
+ * @param ref      the ref the caller asked for, or the project's default branch (a name chosen by GitLab users, so data)
  * @param commitId the commit the content was read at
  * @param size     size in bytes
  * @param hiddenCharactersRemoved number of control, invisible and direction-changing characters (bidi overrides,
@@ -16,6 +16,6 @@ import pl.aiwcorpo.mcp.platform.text.UntrustedText;
  *                 differently from what it does
  * @param content  the file as UTF-8 text, marked as data
  */
-public record RepositoryFile(String project, String path, String ref, String commitId, long size,
+public record RepositoryFile(String project, String path, UntrustedText ref, String commitId, long size,
         int hiddenCharactersRemoved, UntrustedText content) {
 }

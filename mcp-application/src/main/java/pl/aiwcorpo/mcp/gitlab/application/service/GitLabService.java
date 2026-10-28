@@ -31,6 +31,8 @@ import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
  */
 public class GitLabService implements GitLabUseCase {
 
+    private static final int REF_MAX_CHARS = 255;
+
     private final GitLabPort gitlab;
     private final long maxFileBytes;
 
@@ -73,7 +75,8 @@ public class GitLabService implements GitLabUseCase {
             throw new FileNotReturnedException(FileNotReturnedException.Reason.TOO_LARGE, maxFileBytes);
         }
         String text = utf8Text(bytes);
-        return new RepositoryFile(project.pathWithNamespace(), metadata.filePath(), effectiveRef, metadata.commitId(),
+        return new RepositoryFile(project.pathWithNamespace(), filePath, SystemText.plainOrEmpty(effectiveRef, REF_MAX_CHARS),
+                metadata.commitId(),
                 bytes.length, SystemText.hiddenCharacters(text),
                 SystemText.plainOrEmpty(text, (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
     }

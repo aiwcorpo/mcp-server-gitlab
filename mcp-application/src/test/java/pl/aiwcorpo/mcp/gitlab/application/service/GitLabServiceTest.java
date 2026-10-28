@@ -46,7 +46,7 @@ class GitLabServiceTest {
         var file = service.getFile(APP, "README.md", null);
 
         assertThat(file.project()).isEqualTo("team-a/app");
-        assertThat(file.ref()).as("default branch when no ref is given").isEqualTo("main");
+        assertThat(file.ref().text()).as("default branch when no ref is given").isEqualTo("main");
         assertThat(gitlab.contentReadAt).containsExactly("c0ffee");
         assertThat(file.content().text()).isEqualTo("hello");
         assertThat(file.content().kind()).isEqualTo("untrusted-data");

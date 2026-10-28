@@ -12,6 +12,13 @@ import pl.aiwcorpo.mcp.gitlab.integration.GitLabBackendProperties;
 @Configuration
 public class ApplicationWiringConfiguration {
 
+    /**
+     * Largest file the server may be configured to return. The content is JSON-escaped in the result, where a quote or
+     * a backslash takes two characters (control characters are dropped by the text hygiene before), and the result may
+     * not exceed 1 MiB, so twice this limit plus the other fields stays below it.
+     */
+    static final long MAX_CONFIGURABLE_FILE_BYTES = 400L * 1024;
+
     @Bean
     GitLabUseCase gitLabUseCase(GitLabPort gitlab, GitLabBackendProperties backend,
             @Value("${gitlab.files.max-bytes:262144}") long maxFileBytes) {
@@ -19,6 +26,10 @@ public class ApplicationWiringConfiguration {
             // The adapter cuts every answer at max-response-size, so a larger permitted file could never be read.
             throw new IllegalStateException("gitlab.files.max-bytes (MCP_GITLAB_FILE_MAX_BYTES) must not exceed "
                     + "gitlab.backend.max-response-size");
+        }
+        if (maxFileBytes > MAX_CONFIGURABLE_FILE_BYTES) {
+            throw new IllegalStateException("gitlab.files.max-bytes (MCP_GITLAB_FILE_MAX_BYTES) must not exceed "
+                    + MAX_CONFIGURABLE_FILE_BYTES + " bytes: the JSON-escaped content must fit the 1 MiB result");
         }
         return new GitLabService(gitlab, maxFileBytes);
     }
