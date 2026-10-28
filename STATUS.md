@@ -1,11 +1,11 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
-M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-3 (kontrakty 3.1.0), `@ToolTitle` na 4 narzędziach, `@ResourceRef` na `group` i `project`, resolvery `GitLab::Group` i `GitLab::Project` z `classification` (tylko projekty) i `attrs.ancestorClassifications` ze ścieżki zasobu (bez wywołań API), `fetchAll` i cache na czas wywołania przy listach, `ResultFilter` na `list_projects`, `GET /mcp-manifest` zgodny z `tools/list`, 97 testów (mcp-app 80, mcp-tools 10, mcp-application 7). Nie sprawdzone na działającym GitLabie ani w mcp-platform-dev.
+M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-4 (kontrakty 3.1.0), `@ToolTitle` na 4 narzędziach, `@ResourceRef` na `group` i `project`, resolvery `GitLab::Group` i `GitLab::Project` z `classification` (tylko projekty) i `attrs.ancestorClassifications` ze ścieżki zasobu (bez wywołań API), `fetchAll` i cache na czas wywołania przy listach, `ResultFilter` na `list_projects`, `GET /mcp-manifest` zgodny z `tools/list`, 97 testów (mcp-app 80, mcp-tools 10, mcp-application 7). Nie sprawdzone na działającym GitLabie ani w mcp-platform-dev.
 
 M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 78 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).
 
-Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-beta-3` (kontrakty 3.1.0, Spring Boot 4.1.0, Spring AI
-2.0.0, Java 25). Tag `v3.0.0-beta-3` nie istniał przy zamknięciu M3; przejście to podbicie `mcp-platform.version`
+Starter: BOM `pl.aiwcorpo.mcp:mcp-platform-bom:3.0.0-beta-4` (kontrakty 3.1.0, Spring Boot 4.1.0, Spring AI
+2.0.0, Java 25). Tag `v3.0.0-beta-4` nie istniał przy zamknięciu M3; przejście to podbicie `mcp-platform.version`
 w `pom.xml` i przejrzenie MIGRATION "Z beta-2 na beta-3".
 
 ## Runda 2: znaleziska recenzji M1
