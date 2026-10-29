@@ -6,7 +6,7 @@ tą tabelą.
 
 | Narzędzie (klient widzi `gitlab__<nazwa>`) | Ryzyko | Akcja (C6) | Argumenty | Uprawnienie (C9) | Poświadczenie |
 | --- | --- | --- | --- | --- | --- |
-| `list_projects` | `READ_ONLY` | `read` | `group` (`GitLabGroupPath`, maks. 1024) | `mcp-gitlab-read` | z C3: `user-secret` -> `PRIVATE-TOKEN`, `user-oauth`/`token-exchange` -> `Authorization: Bearer` |
+| `list_projects` | `READ_ONLY` | `read` | `group` (`GitLabGroupPath`, maks. 1024) | `mcp-gitlab-read` | z C3: `user-secret` -> `PRIVATE-TOKEN`, `user-oauth` (domyślny) -> `Authorization: Bearer`; inne typy odrzuca starter |
 | `get_file` | `READ_ONLY` | `read` | `project` (`GitLabProjectPath`, maks. 1024), `path` (1-1024, względna, bez `..`/`.`/`//`/`\`/`%`), `ref` opcjonalny (gałąź, tag, SHA; maks. 255) | `mcp-gitlab-read` | jw. |
 | `get_merge_request` | `READ_ONLY` | `read` | `project`, `iid` (1..2147483647) | `mcp-gitlab-read` | jw. |
 | `comment_merge_request` | `UPDATE` | `update` | `project`, `iid`, `body` (1-10000, bez quick actions i `@all`) | `mcp-gitlab-write` | jw. |

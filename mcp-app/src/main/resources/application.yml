@@ -43,7 +43,10 @@ aiwcorpo:
       manifest:
         version: '@project.version@'
         internal-url: ${MCP_INTERNAL_URL:}
-        accepted-credential-types: ${MCP_ACCEPTED_CREDENTIAL_TYPES:user-secret,user-oauth}
+        # The first type is the default of the system (context.credentialType in every Cedar request) and the one the
+        # gateway resolves for GitLab: OAuth. A personal access token is accepted too. A request whose
+        # X-MCP-Credential-Type is outside this list is refused by the starter (internal_error).
+        accepted-credential-types: ${MCP_ACCEPTED_CREDENTIAL_TYPES:user-oauth,user-secret}
 
 gitlab:
   backend:

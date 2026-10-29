@@ -1,5 +1,17 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
+## M4 (2026-10-29)
+
+Kamienie pośrednie:
+
+| Kamień | Zakres | Status |
+| --- | --- | --- |
+| K1 | starter 3.0.0-beta-7 (kontrakty 4.1.0); `accepted-credential-types: [user-oauth, user-secret]` z OAuth na pierwszym miejscu, bez `credential-type`; adapter tylko dla tych dwóch typów; testy obu typów i odmowy `service-account`, `token-exchange`, braku i złego nagłówka typu; stały tekst `not_found_or_denied`; test "grant przed resolwerem"; `manifest.output-file` | zrobione, 106 testów (mcp-app 89, mcp-tools 10, mcp-application 7) |
+| K2 | README (typy poświadczeń, rejestracja manifestu, licznik `mcp_audit_authentication_suppressed_total`), katalog narzędzi, linia M4, obraz | w toku |
+
+Wyszukiwanie przez `StructuredQuery` nie dotyczy tego serwera: `list_projects` listuje projekty jednej grupy po jej id, a model
+nie podaje żadnego zapytania (brak JQL/CQL/`/search`).
+
 M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-4 (kontrakty 3.1.0), `@ToolTitle` na 4 narzędziach, `@ResourceRef` na `group` i `project`, resolvery `GitLab::Group` i `GitLab::Project` z `classification` (tylko projekty) i `attrs.ancestorClassifications` ze ścieżki zasobu (bez wywołań API), `fetchAll` i cache na czas wywołania przy listach, `ResultFilter` na `list_projects`, `GET /mcp-manifest` zgodny z `tools/list`, 97 testów (mcp-app 80, mcp-tools 10, mcp-application 7). Nie sprawdzone na działającym GitLabie ani w mcp-platform-dev.
 
 M1: osiągnięty (2026-10-27, runda 2; 2026-10-28 przeniesiony na starter 3.0.0-alpha-10) - serwer z template'u na starterze 3.0.0-alpha-10, cztery narzędzia GitLaba (`list_projects`, `get_file`, `get_merge_request` READ_ONLY; `comment_merge_request` UPDATE), walidacja argumentów przez starter (C10 `invalid_argument` + C8), wzorce ścieżek przez `contractPattern`, każdy tekst z GitLaba jako `UntrustedText`, https poza `dev`, 78 testów na `StubBackend`, start w profilu `dev` sprawdzony na hoście (mTLS: runda 2, alpha-6).

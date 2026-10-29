@@ -139,11 +139,10 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
     }
 
     @Test
-    void credentialsGitLabDoesNotTakeAreRefusedBeforeTheBackend() {
-        try (McpSyncClient serviceAccount = clientWithCredential("Bearer svc-token", BackendCredential.Type.SERVICE_ACCOUNT);
-                McpSyncClient basic = clientWithCredential("Basic amtvd2Fsc2tpOnNlY3JldA==", BackendCredential.Type.USER_SECRET);
+    void aSchemeThatDoesNotFitTheTypeAsksToReconnectBeforeTheBackend() {
+        try (McpSyncClient basic = clientWithCredential("Basic amtvd2Fsc2tpOnNlY3JldA==", BackendCredential.Type.USER_SECRET);
                 McpSyncClient oauthAsApiKey = clientWithCredential("ApiKey gloas-oauth", BackendCredential.Type.USER_OAUTH)) {
-            for (McpSyncClient client : List.of(serviceAccount, basic, oauthAsApiKey)) {
+            for (McpSyncClient client : List.of(basic, oauthAsApiKey)) {
                 assertCredentialRequired(call(client, "get_file", README));
             }
         }

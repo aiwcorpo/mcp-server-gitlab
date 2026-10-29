@@ -52,6 +52,9 @@ abstract class ServerTestSupport {
     static void environment(DynamicPropertyRegistry registry) {
         GATEWAY.serverProperties().forEach((name, value) -> registry.add(name, () -> value));
         registry.add("gitlab.backend.base-url", BACKEND::baseUrl);
+        // TestGateway defaults to [user-secret, user-oauth]; the first entry is the default type of the system, and for
+        // GitLab that is OAuth, as in application.yml.
+        registry.add("aiwcorpo.mcp.platform.manifest.accepted-credential-types", () -> "user-oauth,user-secret");
         // Short limits so the timeout and size tests run quickly; StubBackend's slow and huge answers exceed them.
         registry.add("gitlab.backend.read-timeout", () -> "1s");
         registry.add("gitlab.backend.max-response-size", () -> "64KB");

@@ -139,6 +139,17 @@ class ResourcePolicyTest extends ServerTestSupport {
     }
 
     @Test
+    void aProjectOutsideTheGrantsIsRefusedBeforeTheResolverAndLooksLikeAMissingOne() {
+        try (McpSyncClient client = clientAs(user -> { reader(user); user.virtualServer("sub-only", Map.of("gitlabGroups", List.of("team-a/sub"))); },
+                PAT, BackendCredential.Type.USER_SECRET)) {
+            assertNotFoundOrDenied(call(client, "get_file", file("team-a/app")));
+            assertNotFoundOrDenied(call(client, "get_merge_request", mergeRequest("team-a/app")));
+            assertNotFoundOrDenied(call(client, "get_file", file(MISSING_PROJECT)));
+        }
+        assertThat(BACKEND.requests()).as("no grant, so GitLab is not asked about the project").isEmpty();
+    }
+
+    @Test
     void aLinkNarrowedToASubgroupHidesTheGroupAboveAndItsProjects() {
         try (McpSyncClient client = clientAs(user -> { reader(user); user.virtualServer("sub-only", Map.of("gitlabGroups", List.of("team-a/sub"))); },
                 PAT, BackendCredential.Type.USER_SECRET)) {

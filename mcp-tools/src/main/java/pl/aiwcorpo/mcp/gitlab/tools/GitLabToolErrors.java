@@ -16,7 +16,7 @@ public class GitLabToolErrors implements ToolErrorMapping {
     public Optional<SafeError> map(Throwable ex) {
         if (ex instanceof ResourceNotFoundException) {
             return Optional.of(new SafeError(ToolErrorCode.NOT_FOUND_OR_DENIED.code(),
-                    "The resource does not exist or you do not have access to it."));
+                    ToolErrorCode.NOT_FOUND_OR_DENIED_MESSAGE));
         }
         if (ex instanceof FileNotReturnedException notReturned) {
             String message = switch (notReturned.reason()) {

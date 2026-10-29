@@ -8,10 +8,11 @@ import pl.aiwcorpo.mcp.platform.security.CredentialRequiredException;
 
 /**
  * How the C3 credential is presented to GitLab. A personal or project access token ({@code user-secret}) goes
- * in {@code PRIVATE-TOKEN}; an OAuth access token ({@code user-oauth}, or one from token exchange) goes in
- * {@code Authorization: Bearer}. Any other combination is a platform misconfiguration (GitLab is connected per
- * user, and Basic is not offered for users in v1), so the call is refused instead of guessing a header and the user is sent to the portal to connect the account
- * again ({@code credential_required}).
+ * in {@code PRIVATE-TOKEN}; an OAuth access token ({@code user-oauth}) goes in {@code Authorization: Bearer}.
+ * The server accepts only these two types (the starter refuses a service account or a token exchange before
+ * any tool runs). A scheme that does not fit the type (Basic for a user, an API key) is a platform
+ * misconfiguration, so the call is refused instead of guessing a header and the user is sent to the portal
+ * to connect the account again ({@code credential_required}).
  */
 final class GitLabCredentials {
 
@@ -30,7 +31,7 @@ final class GitLabCredentials {
                 }
                 headers.set(PRIVATE_TOKEN, credential.value());
             }
-            case USER_OAUTH, TOKEN_EXCHANGE -> {
+            case USER_OAUTH -> {
                 if (scheme != BackendCredential.Scheme.BEARER) {
                     throw unsupported(credential);
                 }
