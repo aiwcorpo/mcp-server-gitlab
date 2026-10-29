@@ -56,6 +56,16 @@ class ProductionConfigurationTest {
     }
 
     @Test
+    void theDefaultCredentialTypeOfProductionIsOAuthAndThePersonalTokenFollows() throws IOException {
+        PropertySource<?> base = new YamlPropertySourceLoader()
+                .load("application.yml", new ClassPathResource("application.yml")).getFirst();
+        String declared = String.valueOf(base.getProperty("aiwcorpo.mcp.platform.manifest.accepted-credential-types"));
+
+        assertThat(declared).isEqualTo("${MCP_ACCEPTED_CREDENTIAL_TYPES:user-oauth,user-secret}");
+        assertThat(base.containsProperty("aiwcorpo.mcp.platform.credential-type")).isFalse();
+    }
+
+    @Test
     void testKeysAndThePolicyRepositoryOfTheDevStackAreConfiguredInDevOnly() throws IOException {
         Map<String, Object> dev = (Map<String, Object>) new YamlPropertySourceLoader()
                 .load("application-dev.yml", new ClassPathResource("application-dev.yml")).getFirst().getSource();

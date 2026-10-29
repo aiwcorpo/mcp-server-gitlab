@@ -55,6 +55,7 @@ abstract class ServerTestSupport {
         // TestGateway defaults to [user-secret, user-oauth]; the first entry is the default type of the system, and for
         // GitLab that is OAuth, as in application.yml.
         registry.add("aiwcorpo.mcp.platform.manifest.accepted-credential-types", () -> "user-oauth,user-secret");
+        ManifestArtifactTest.useProductionManifestValues(registry);
         // Short limits so the timeout and size tests run quickly; StubBackend's slow and huge answers exceed them.
         registry.add("gitlab.backend.read-timeout", () -> "1s");
         registry.add("gitlab.backend.max-response-size", () -> "64KB");

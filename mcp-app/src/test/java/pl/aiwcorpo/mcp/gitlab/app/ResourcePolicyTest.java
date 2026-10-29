@@ -139,7 +139,7 @@ class ResourcePolicyTest extends ServerTestSupport {
     }
 
     @Test
-    void aProjectOutsideTheGrantsIsRefusedBeforeTheResolverAndLooksLikeAMissingOne() {
+    void aProjectOutsideTheLinkIsRefusedBeforeTheResolverAndLooksLikeAMissingOne() {
         try (McpSyncClient client = clientAs(user -> { reader(user); user.virtualServer("sub-only", Map.of("gitlabGroups", List.of("team-a/sub"))); },
                 PAT, BackendCredential.Type.USER_SECRET)) {
             assertNotFoundOrDenied(call(client, "get_file", file("team-a/app")));
@@ -147,6 +147,16 @@ class ResourcePolicyTest extends ServerTestSupport {
             assertNotFoundOrDenied(call(client, "get_file", file(MISSING_PROJECT)));
         }
         assertThat(BACKEND.requests()).as("no grant, so GitLab is not asked about the project").isEmpty();
+    }
+
+    @Test
+    void aWriterWithoutAScopeGrantIsRefusedBeforeTheResolverAndNothingReachesGitLab() {
+        try (McpSyncClient client = clientAs(user -> user.username("jkowalski").groups(List.of(READ_GROUP, WRITE_GROUP)), PAT,
+                BackendCredential.Type.USER_SECRET)) {
+            assertNotFoundOrDenied(call(client, "comment_merge_request", Map.of("project", "team-a/app", "iid", 1, "body", "ok")));
+            assertNotFoundOrDenied(call(client, "comment_merge_request", Map.of("project", MISSING_PROJECT, "iid", 1, "body", "ok")));
+        }
+        assertThat(BACKEND.requests()).as("no grant on the project, so GitLab is not asked about it").isEmpty();
     }
 
     @Test

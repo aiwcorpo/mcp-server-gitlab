@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Value;
 import pl.aiwcorpo.mcp.platform.security.BackendCredential;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -28,17 +27,9 @@ class CredentialTypeTest extends ServerTestSupport {
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
-    @Value("${aiwcorpo.mcp.platform.manifest.accepted-credential-types}")
-    List<String> acceptedTypes;
-
     @BeforeEach
     void resetBackend() {
         BACKEND.reset();
-    }
-
-    @Test
-    void theDefaultTypeIsOAuthAndThePersonalTokenIsTheSecondAcceptedOne() {
-        assertThat(acceptedTypes).containsExactly("user-oauth", "user-secret");
     }
 
     @Test

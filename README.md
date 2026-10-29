@@ -1,6 +1,6 @@
 # mcp-gitlab: serwer MCP platformy dla GitLaba
 
-Serwer MCP dla GitLaba (REST API v4), zbudowany na `mcp-platform-starter` 3.0.0-beta-8 (Java 25, Spring Boot
+Serwer MCP dla GitLaba (REST API v4), zbudowany na `mcp-platform-starter` 3.0.0-beta-9 (Java 25, Spring Boot
 4.1.0, Spring AI 2.0.0, kontrakty `mcp-contracts` 4.1.0). Stoi wyłącznie za gateway'em platformy: przyjmuje
 ruch tylko po mTLS z wewnętrznym JWT gateway'a (C2), a do GitLaba woła z poświadczeniem użytkownika, które
 gateway dołącza do każdego żądania (C3). Bez poprawnego JWT odpowiada 401, nie ma trybu anonimowego.
@@ -151,12 +151,18 @@ wyłącza TLS i mTLS, trzyma `jti` w pamięci i dopuszcza klucze testowe; starte
 
 ### Manifest i rejestracja w gateway'u
 
-Do rejestracji idzie artefakt budowy, nie odpowiedź działającego serwera: `manifest.output-file`
-(`target/mcp-manifest.json`, w `application-dev.yml`) zapisuje manifest przy starcie testów, więc po `./mvnw verify`
-leży w `mcp-app/target/mcp-manifest.json`. CI rejestruje go certyfikatem `mcp-registry-ci-mcp-gitlab`; zatwierdzane
-przy wdrożeniu są tylko narzędzia `READ_ONLY` (`list_projects`, `get_file`, `get_merge_request`), a
-`comment_merge_request` (`UPDATE`) czeka na `approve` administratora. Obniżenie `risk` jest zawsze odrzucane
-(`422 risk_lowered`). W profilu `devstack` manifest ma `"environment": "dev"` i gateway w trybie produkcyjnym go
+Do rejestracji idzie artefakt budowy, nie odpowiedź działającego serwera: `mcp-app/target/mcp-manifest.json`.
+Powstaje w zwykłym buildzie (`./mvnw package` albo `verify`, także z `-DskipTests`): osobne wykonanie surefire
+`manifest-artifact` w fazie `package` uruchamia `ManifestArtifactTest`, który startuje serwer z wersją z `pom.xml`
+i typami poświadczeń z produkcyjnego `application.yml` (tylko `internal-url` pochodzi z profilu `dev`; w
+produkcji ustawia go `MCP_INTERNAL_URL`) i zapisuje plik przez `manifest.output-file`. Test sprawdza, że plik
+równa się odpowiedzi `GET /mcp-manifest`, nie ma `environment` i przechodzi `ManifestRules`. CI bierze ten plik
+z `mcp-app/target/` po buildzie przeglądanego commitu (przy innej ścieżce, np. `registry-register.sh` w
+`mcp-platform-dev`, podaje się katalog z plikiem) i rejestruje certyfikatem `mcp-registry-ci-mcp-gitlab`.
+Przy wdrożeniu zatwierdzane są tylko narzędzia `READ_ONLY` (`list_projects`, `get_file`, `get_merge_request`);
+`comment_merge_request` (`UPDATE`) czeka na `approve` administratora. Obniżenie `risk` nie jest odrzucane
+(CC-167): `PUT` kończy się stanem `pending_approval` z `riskLowered: true`, a w dół prowadzi tylko `approve` z
+`acceptRiskLowering`. W profilu `devstack` manifest ma `"environment": "dev"` i gateway w trybie produkcyjnym go
 odrzuca (`environment_mismatch`).
 
 ### Metryki do alertów
@@ -251,12 +257,13 @@ handshake'u. Pełne wywołanie narzędzia wymaga gateway'a z hosta (`mcp-gateway
 | `CommentMergeRequestToolTest` | notatka wysłana jako użytkownik (POST, treść), wynik bez echa treści, brak poświadczenia i 401, 404 = 403 (bez POST dla niewidocznego projektu), quick actions i limity odrzucone przed GitLabem |
 | `ToolSurfaceAndCredentialTest` | `tools/list`: 4 narzędzia, `additionalProperties: false`, limit dla każdego argumentu, hinty ryzyka, opisy bez instrukcji; nieznany argument i zły typ -> `invalid_argument` (bez nazwy argumentu w wyniku i logu); wzorce w schemacie = wzorce kontraktu; `user-oauth` w `Authorization`, PAT w `PRIVATE-TOKEN`, schemat niepasujący do typu -> `credential_required` (zdarzenie `credential_unsupported` w logu) bez wywołania GitLaba; poświadczenie i treść błędu GitLaba poza wynikiem i logiem |
 | `BackendResponseTest` | nieczytelna odpowiedź GitLaba, przekierowanie (nie podążamy, nie jest "brakiem"), timeout -> `upstream_unavailable`, odpowiedź ponad limit; treść odpowiedzi poza wynikiem i logiem |
-| `ProductionConfigurationTest` | `client-auth: need` poza `dev`, `https` dla GitLaba poza `dev` (wyjątek `ALLOW_PLAIN_HTTP`), `dev` tylko na pętli zwrotnej |
+| `ProductionConfigurationTest` | domyślne typy produkcji `user-oauth,user-secret` w tej kolejności (zamiana daje czerwony test); `client-auth: need` poza `dev`, `https` dla GitLaba poza `dev` (wyjątek `ALLOW_PLAIN_HTTP`), `dev` tylko na pętli zwrotnej |
 | `DevProfileLoopbackTest` | `dev` na `0.0.0.0` nie wstaje |
 | `GatewayOnlyAccessTest` | bez JWT 401 (`tools/call`, `ping`, `initialize`), JWT dla innego serwera, innego narzędzia, wariant serwisowy i przeterminowany -> 401; bez JWT tylko health |
 | `GitLabArgumentsTest` (mcp-tools) | wektory `resource-ids/gitlab-*.json` z kontraktu, limit ścieżki = limit kontraktu, ścieżka pliku, ref, iid, quick actions, `@all` |
-| `ResourcePolicyTest` | projekt z topikiem `restricted` -> `not_found_or_denied` identyczne jak dla nieistniejącego (odczyt i zapis); grupa nie jest klasyfikowana, także gdy GitLab poda dla niej topics (`hr`, `hr/payroll/team`); brak wywołań po grupy-przodków; projekt poza zakresem linku odrzucony przed resolwerem (GitLab nie dostaje żadnego żądania); lista bez projektu zastrzeżonego i obcego; `access_denied` bez grupy; zawężenie linku do podgrupy; zakres zapisu |
-| `CredentialTypeTest` | `[user-oauth, user-secret]` z `user-oauth` jako domyślnym; OAuth w `Authorization: Bearer`, PAT w `PRIVATE-TOKEN`; `service-account` na każdym z 4 narzędzi i `token-exchange` -> `internal_error`; brak nagłówka typu, `User-OAuth` i nieznany typ -> `internal_error`; żądanie bez poświadczenia -> `credential_required`; w każdym przypadku odmowy GitLab nie dostaje żądania |
+| `ResourcePolicyTest` | projekt z topikiem `restricted` -> `not_found_or_denied` identyczne jak dla nieistniejącego (odczyt i zapis); grupa nie jest klasyfikowana, także gdy GitLab poda dla niej topics (`hr`, `hr/payroll/team`); brak wywołań po grupy-przodków; projekt poza zakresem linku i zapis bez grantu zakresu odrzucone przed resolwerem (GitLab nie dostaje żadnego żądania); lista bez projektu zastrzeżonego i obcego; `access_denied` bez grupy; zawężenie linku do podgrupy; zakres zapisu |
+| `CredentialTypeTest` | OAuth w `Authorization: Bearer`, PAT w `PRIVATE-TOKEN`; `service-account` na każdym z 4 narzędzi i `token-exchange` -> `internal_error`; brak nagłówka typu, `User-OAuth` i nieznany typ -> `internal_error`; żądanie bez poświadczenia -> `credential_required`; w każdym przypadku odmowy GitLab nie dostaje żądania |
+| `ManifestArtifactTest` | (wykonanie `manifest-artifact`, faza `package`) plik `target/mcp-manifest.json` z wersją z pom i typami z `application.yml`, równy `GET /mcp-manifest`, bez `environment`, przechodzi `ManifestRules` |
 | `ManifestTest` | `/mcp-manifest` przechodzi `ManifestRules`, definicje = `tools/list`, `definitionHash`, tytuły, zamknięte schematy, `resourceRefs` i ryzyko |
 | `GitLabServiceTest` (mcp-application) | filtr przestrzeni nazw, odczyt przy commicie, limity, wykrywanie binariów, merge request innego projektu |
 

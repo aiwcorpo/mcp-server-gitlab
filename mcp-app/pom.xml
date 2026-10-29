@@ -38,6 +38,37 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!--
+              The manifest that CI registers (target/mcp-manifest.json) is written by ManifestArtifactTest, which starts
+              the server with the version of this pom and the credential types of application.yml. It runs in its own
+              execution in the package phase: a plain build produces it too, and -DskipTests does not skip it because
+              skipTests is set explicitly here. The default execution leaves it out, so only one context writes the file.
+            -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludes><exclude>**/ManifestArtifactTest.java</exclude></excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>manifest-artifact</id>
+                        <phase>package</phase>
+                        <goals><goal>test</goal></goals>
+                        <configuration>
+                            <skipTests>false</skipTests>
+                            <skip>false</skip>
+                            <test>ManifestArtifactTest</test>
+                            <failIfNoSpecifiedTests>true</failIfNoSpecifiedTests>
+                            <systemPropertyVariables>
+                                <manifest.version>${project.version}</manifest.version>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>

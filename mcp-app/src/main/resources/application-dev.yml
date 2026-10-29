@@ -26,9 +26,6 @@ aiwcorpo:
       manifest:
         internal-url: https://mcp-gitlab.internal:8443/mcp
         accepted-credential-types: user-oauth,user-secret
-        # The manifest registered by CI is this build artifact (mcp-app/target/mcp-manifest.json), written by the
-        # test run of the reviewed commit; the running server's own answer is never registered.
-        output-file: target/mcp-manifest.json
 
 gitlab:
   backend:
