@@ -7,10 +7,12 @@ Kamienie pośrednie:
 | Kamień | Zakres | Status |
 | --- | --- | --- |
 | K1 | starter 3.0.0-beta-7 (kontrakty 4.1.0); `accepted-credential-types: [user-oauth, user-secret]` z OAuth na pierwszym miejscu, bez `credential-type`; adapter tylko dla tych dwóch typów; testy obu typów i odmowy `service-account`, `token-exchange`, braku i złego nagłówka typu; stały tekst `not_found_or_denied`; test "grant przed resolwerem"; `manifest.output-file` | zrobione, 106 testów (mcp-app 89, mcp-tools 10, mcp-application 7) |
-| K2 | README (typy poświadczeń, rejestracja manifestu, licznik `mcp_audit_authentication_suppressed_total`), katalog narzędzi, linia M4, obraz | w toku |
+| K2 | README (typy poświadczeń, rejestracja manifestu, licznik `mcp_audit_authentication_suppressed_total`), katalog narzędzi, linia M4, obraz | zrobione |
 
 Wyszukiwanie przez `StructuredQuery` nie dotyczy tego serwera: `list_projects` listuje projekty jednej grupy po jej id, a model
 nie podaje żadnego zapytania (brak JQL/CQL/`/search`).
+
+M4: osiągnięty (2026-10-29) - starter 3.0.0-beta-7 (kontrakty 4.1.0), `accepted-credential-types: [user-oauth, user-secret]` (typ domyślny OAuth), adapter `Authorization: Bearer` / `PRIVATE-TOKEN` wg `X-MCP-Credential-Type`, odmowa `service-account`, `token-exchange` i złego lub brakującego nagłówka typu (`internal_error` przed narzędziem), stały tekst `not_found_or_denied`, grant przed resolwerem, klasyfikacja tylko projektów z `ancestorClassifications` bez zmian, manifest jako artefakt budowy `mcp-app/target/mcp-manifest.json`, licznik `mcp_audit_authentication_suppressed_total` w README, 106 testów (mcp-app 89, mcp-tools 10, mcp-application 7). Nie sprawdzone: profil `devstack` (`environment: dev` w manifeście robi starter, bez własnego testu), działający GitLab, rejestracja w gateway'ie, `comment_merge_request` jako `UPDATE` czeka na `approve` (C9 z G2-L2 bez zmian).
 
 M3: osiągnięty (2026-10-28) - starter 3.0.0-beta-4 (kontrakty 3.1.0), `@ToolTitle` na 4 narzędziach, `@ResourceRef` na `group` i `project`, resolvery `GitLab::Group` i `GitLab::Project` z `classification` (tylko projekty) i `attrs.ancestorClassifications` ze ścieżki zasobu (bez wywołań API), `fetchAll` i cache na czas wywołania przy listach, `ResultFilter` na `list_projects`, `GET /mcp-manifest` zgodny z `tools/list`, 97 testów (mcp-app 80, mcp-tools 10, mcp-application 7). Nie sprawdzone na działającym GitLabie ani w mcp-platform-dev.
 
