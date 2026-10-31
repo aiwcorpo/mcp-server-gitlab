@@ -1,5 +1,25 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
+## M5 (2026-10-31)
+
+Kamienie: starter 3.0.0-beta-10 (kontrakty 5.1.0) i README; testy odrzucenia tokenu z `vs` i `vsc` (`extraClaim`,
+401 bez dojścia do GitLaba w `GatewayOnlyAccessTest`) zamiast `GatewayLinkClaimsTest`, testy zawężenia linkiem usunięte
+(w kodzie produkcyjnym nie było nic do usunięcia: serwer nie czytał `linkIds`, `linkType` ani `virtualServer`); manifest
+z `ManifestExport` w fazie `package` (`manifest.export.skip=false`, `target/mcp-manifest.json`, także z `-DskipTests`),
+`ManifestArtifactTest` zastąpiony porównaniem w `ManifestTest`; `ci/run.sh` (verify, hygiene, image; nieznany krok to
+kod 2, zero testów to błąd) z nakładkami GitLab, Jenkins, GitHub z szablonu 444f826; `DevProfileLoopbackTest` jak w
+szablonie (`assertServerIsGuarded`), zielony także z `INVOCATION_ID` i `KUBERNETES_SERVICE_HOST`; README bez zawężenia
+linkiem.
+
+Audyt: serwer nie ma własnych alertów ani reguł na `virtualServer` i `link_scope` (README ich nie miało; zmiana dotyczy
+tylko startera). Nie sprawdzone: paczka polityk 5.x z `mcp-policies` `out/repository-m5` (testy używają paczki z
+kontraktów przez `TestGateway`), `ci/run.sh image` w pipeline'ie, działający GitLab.
+
+Obraz: `mcp-server-gitlab:m5-b777b1f`. Manifest: `mcp-app/target/mcp-manifest.json`. 105 testów (mcp-app 88,
+mcp-tools 10, mcp-application 7).
+
+M5: kod gotowy (2026-10-31)
+
 ## M4 (2026-10-29)
 
 Kamienie pośrednie:
