@@ -228,3 +228,7 @@ Uruchomienie z mcp-platform-dev nie było sprawdzane: mock GitLaba (`mocks/syste
 ## Runda 5: starter alpha-11 (2026-10-28)
 
 BOM alpha-10 -> alpha-11 (MIGRATION-3.0.md, sekcja "Zmiany w 3.0.0-alpha-11"). `DevProfileLoopbackTest` sprawdza regułę guarda przez `DevProfileGuardAssertions.assertDevProfileLoopbackRule()` (A10-M1), więc przechodzi także w kontenerze CI. `./mvnw clean verify`: 78 testów, 0 błędów; `INVOCATION_ID=ci ./mvnw -B verify`: bez różnic. Start lokalny w profilu `dev`: health 200, POST /mcp bez JWT 401.
+
+Poprawki CI po przeglądzie szablonu 3df797e (2026-10-31): hygiene fail-closed, liczniki testów per moduł (CI_TEST_MODULES, CI_APP_MIN_TESTS),
+tag obrazu `mcp-server-gitlab:m5-<sha7>`, `ManifestTest` porównuje hash (gdy listy typów równe) i wersję z pom, test `vs`/`vsc` ma kontrolę pozytywną (powód w logu: invalid_claims). CI_TEST_MODULES bez mcp-integration (brak testów).
+- Dowód: `ci/run.sh verify` 105 przypadków uruchomionych, `ci/run.sh bogus` daje 2, obraz `mcp-server-gitlab:m5-d145d31` zbudowany z `ci/run.sh image`.
