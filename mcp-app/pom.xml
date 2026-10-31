@@ -14,6 +14,9 @@
     </parent>
     <artifactId>mcp-app</artifactId>
     <name>mcp-gitlab :: App (bootstrap)</name>
+    <properties>
+        <manifest.export.skip>false</manifest.export.skip>
+    </properties>
     <dependencies>
         <dependency><groupId>${project.groupId}</groupId><artifactId>mcp-tools</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>${project.groupId}</groupId><artifactId>mcp-integration</artifactId><version>${project.version}</version></dependency>
@@ -39,32 +42,22 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <!--
-              The manifest that CI registers (target/mcp-manifest.json) is written by ManifestArtifactTest, which starts
-              the server with the version of this pom and the credential types of application.yml. It runs in its own
-              execution in the package phase: a plain build produces it too, and -DskipTests does not skip it because
-              skipTests is set explicitly here. The default execution leaves it out, so only one context writes the file.
+              The manifest to register at the gateway: built from the reviewed commit and the production configuration,
+              in the ordinary build (also with -DskipTests), as target/mcp-manifest.json.
             -->
             <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>default-test</id>
-                        <configuration>
-                            <excludes><exclude>**/ManifestArtifactTest.java</exclude></excludes>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>manifest-artifact</id>
+                        <id>export-manifest</id>
                         <phase>package</phase>
-                        <goals><goal>test</goal></goals>
+                        <goals><goal>java</goal></goals>
                         <configuration>
-                            <skipTests>false</skipTests>
-                            <skip>false</skip>
-                            <test>ManifestArtifactTest</test>
-                            <failIfNoSpecifiedTests>true</failIfNoSpecifiedTests>
-                            <systemPropertyVariables>
-                                <manifest.version>${project.version}</manifest.version>
-                            </systemPropertyVariables>
+                            <skip>${manifest.export.skip}</skip>
+                            <mainClass>pl.aiwcorpo.mcp.gitlab.app.ManifestExport</mainClass>
+                            <arguments><argument>${project.build.directory}/mcp-manifest.json</argument></arguments>
+                            <classpathScope>runtime</classpathScope>
                         </configuration>
                     </execution>
                 </executions>

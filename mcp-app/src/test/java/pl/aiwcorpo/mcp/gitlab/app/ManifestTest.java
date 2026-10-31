@@ -66,6 +66,28 @@ class ManifestTest extends ServerTestSupport {
         return tools;
     }
 
+    private static JsonNode withoutHash(JsonNode tools) {
+        JsonNode copy = tools.deepCopy();
+        copy.forEach(tool -> ((tools.jackson.databind.node.ObjectNode) tool).remove("definitionHash"));
+        return copy;
+    }
+
+    @Test
+    void theBuildManifestHasTheToolsTheServerPublishes() throws Exception {
+        JsonNode exported = JSON.readTree(ManifestExport.manifest());
+        JsonNode served = manifest();
+
+        // definitionHash is left out: it covers the accepted credential types too, which tests set explicitly.
+        assertThat(withoutHash(exported.get("tools"))).as("same definitions as tools/list").isEqualTo(withoutHash(served.get("tools")));
+        assertThat(exported.get("resourceTypes")).isEqualTo(served.get("resourceTypes"));
+        assertThat(exported.get("serverId")).isEqualTo(served.get("serverId"));
+        assertThat(exported.has("environment")).as("outside devstack the field is absent").isFalse();
+        assertThat(exported.at("/credential/acceptedTypes")).extracting(JsonNode::asString)
+                .containsExactly("user-oauth", "user-secret");
+        assertThat(ManifestRules.violations(exported.toString())).isEmpty();
+        assertThat(exported.get("tools")).hasSize(4);
+    }
+
     @Test
     void theManifestPassesTheRulesOfTheGateway() throws Exception {
         JsonNode manifest = manifest();

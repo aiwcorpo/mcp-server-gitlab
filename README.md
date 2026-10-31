@@ -1,7 +1,7 @@
 # mcp-gitlab: serwer MCP platformy dla GitLaba
 
-Serwer MCP dla GitLaba (REST API v4), zbudowany na `mcp-platform-starter` 3.0.0-beta-9 (Java 25, Spring Boot
-4.1.0, Spring AI 2.0.0, kontrakty `mcp-contracts` 4.1.0). Stoi wyłącznie za gateway'em platformy: przyjmuje
+Serwer MCP dla GitLaba (REST API v4), zbudowany na `mcp-platform-starter` 3.0.0-beta-10 (Java 25, Spring Boot
+4.1.0, Spring AI 2.0.0, kontrakty `mcp-contracts` 5.1.0). Stoi wyłącznie za gateway'em platformy: przyjmuje
 ruch tylko po mTLS z wewnętrznym JWT gateway'a (C2), a do GitLaba woła z poświadczeniem użytkownika, które
 gateway dołącza do każdego żądania (C3). Bez poprawnego JWT odpowiada 401, nie ma trybu anonimowego.
 
@@ -90,14 +90,14 @@ Decyzja (2026-10-28): w GitLabie klasyfikujemy tylko projekty. `classification` 
 dostaje mapę bez siebie). Nie ma wywołań API po przodków, więc grupa nadrzędna niewidoczna dla użytkownika niczego nie
 zmienia. Skutek: `restricted` na grupie nie zamyka jej poddrzewa; zamyka tylko projekt z tym topikiem.
 
-- Brak zasobu, 403 z GitLaba, projekt z `restricted` w topics i zasób poza zakresem linku (`vsScopes.gitlabGroups`)
-  dają ten sam `not_found_or_denied` z tym samym tekstem. Brak grupy narzędzia to `access_denied`.
+- Brak zasobu, 403 z GitLaba i projekt z `restricted` w topics dają ten sam `not_found_or_denied` z tym samym
+  tekstem. Brak grupy narzędzia to `access_denied`.
 - Odpowiedzi GitLaba (grupa listingu i strona jej projektów) są pamiętane do końca wywołania (`CallCache`, klucz:
   kontekst wywołania startera, wielkość liter pomijana). `list_projects` czyta stronę projektów grupy raz; `ResultFilter`
   rozwiązuje wyniki jednym `fetchAll`, który bierze projekty z tej strony zamiast `GET /projects/:path` na każdy.
 - `list_projects` jest wyszukiwaniem w zakresie jednej grupy: serwer buduje zapytanie (id grupy, `with_shared=false`,
-  `include_subgroups=false`, 100 na stronę), model podaje tylko grupę. Grupa jest `@ResourceRef`, więc zawężenie linku
-  działa przez politykę (grupa spoza linku to `not_found_or_denied`, bez ujawniania, że istnieje); `QueryScope` nie
+  `include_subgroups=false`, 100 na stronę), model podaje tylko grupę. Grupa jest `@ResourceRef`, więc o dostępie do
+  niej decyduje polityka (grupa bez grantu to `not_found_or_denied`, bez ujawniania, że istnieje); `QueryScope` nie
   jest potrzebny. Ścieżka każdego projektu w wyniku to `@ResourceRef`: projekty z `restricted` w topics znikają z
   listy, bez błędu. `truncated` mówi tylko, że GitLab ma następną stronę.
 
@@ -152,18 +152,40 @@ wyłącza TLS i mTLS, trzyma `jti` w pamięci i dopuszcza klucze testowe; starte
 ### Manifest i rejestracja w gateway'u
 
 Do rejestracji idzie artefakt budowy, nie odpowiedź działającego serwera: `mcp-app/target/mcp-manifest.json`.
-Powstaje w zwykłym buildzie (`./mvnw package` albo `verify`, także z `-DskipTests`): osobne wykonanie surefire
-`manifest-artifact` w fazie `package` uruchamia `ManifestArtifactTest`, który startuje serwer z wersją z `pom.xml`
-i typami poświadczeń z produkcyjnego `application.yml` (tylko `internal-url` pochodzi z profilu `dev`; w
-produkcji ustawia go `MCP_INTERNAL_URL`) i zapisuje plik przez `manifest.output-file`. Test sprawdza, że plik
-równa się odpowiedzi `GET /mcp-manifest`, nie ma `environment` i przechodzi `ManifestRules`. CI bierze ten plik
-z `mcp-app/target/` po buildzie przeglądanego commitu (przy innej ścieżce, np. `registry-register.sh` w
-`mcp-platform-dev`, podaje się katalog z plikiem) i rejestruje certyfikatem `mcp-registry-ci-mcp-gitlab`.
+Powstaje w zwykłym buildzie (`./mvnw package` albo `verify`, także z `-DskipTests`): `ManifestExport` uruchamia w
+fazie `package` `exec-maven-plugin` (`mcp-app/pom.xml`, `manifest.export.skip=false`). Czyta konfigurację produkcyjną
+(`application.yml` bez profilu) i listę narzędzi z `McpToolsConfiguration`, nie startuje serwera i używa tego samego
+`ManifestGenerator` z tymi samymi kontrolami co serwer przy starcie, więc manifest, który gateway by odrzucił,
+zatrzymuje build. `internalUrl` jest informacyjny (z `MCP_INTERNAL_URL`, a gdy go brak,
+`https://mcp-gitlab.internal:8443/mcp`). `ManifestTest` pilnuje, że narzędzia tego pliku są identyczne z `tools/list`
+działającego serwera (bez `definitionHash`, który obejmuje też typy poświadczeń ustawione w testach), że manifest nie ma
+`environment` i że przechodzi `ManifestRules`. Nowa klasa narzędzi trafia i do `McpToolsConfiguration`, i do
+`ManifestExport.manifest()`. CI bierze ten plik z `mcp-app/target/` po buildzie przeglądanego commitu (przy innej
+ścieżce, np. `registry-register.sh` w `mcp-platform-dev`, podaje się katalog z plikiem) i rejestruje certyfikatem
+`mcp-registry-ci-mcp-gitlab`.
 Przy wdrożeniu zatwierdzane są tylko narzędzia `READ_ONLY` (`list_projects`, `get_file`, `get_merge_request`);
 `comment_merge_request` (`UPDATE`) czeka na `approve` administratora. Obniżenie `risk` nie jest odrzucane
 (CC-167): `PUT` kończy się stanem `pending_approval` z `riskLowered: true`, a w dół prowadzi tylko `approve` z
 `acceptRiskLowering`. W profilu `devstack` manifest ma `"environment": "dev"` i gateway w trybie produkcyjnym go
 odrzuca (`environment_mismatch`).
+
+### CI
+
+Cała logika jest w `ci/run.sh` (`make ci` woła `ci/run.sh verify`); `.gitlab-ci.yml`, `Jenkinsfile` i
+`.github/workflows/ci.yml` to cienkie nakładki, więc to samo działa lokalnie, w obrazie
+`maven:3.9.12-eclipse-temurin-25` i w każdym z trzech systemów.
+
+| Krok | Co robi |
+| --- | --- |
+| `ci/run.sh verify` (domyślny) | `hygiene`, `mvnw clean verify`, kontrola, że uruchomiono co najmniej jeden test (pominięte nie liczą się) i że powstał `mcp-app/target/mcp-manifest.json` |
+| `ci/run.sh hygiene` | cudzysłowy, spacje i wielokropek spoza ASCII oraz ślady narzędzi w źródłach |
+| `ci/run.sh image` | `docker build` jaru z `verify`; tylko gałąź `main`, wymaga demona Dockera |
+
+Inny argument kończy się kodem 2. Merge request i pull request nie dostają sekretów ani gniazda Dockera: testy nie
+potrzebują kontenerów, a rejestr Maven z artefaktami platformy (`MCP_MAVEN_REPOSITORY_URL`, zwykła zmienna) jest wtedy
+czytany anonimowo (`.ci/settings-anonymous.xml`). Dane dostępu (`MCP_MAVEN_REPOSITORY_USER`, `_PASSWORD`; w GitLabie
+zmienne Protected i Masked, w Jenkinsie poświadczenie `mcp-maven-registry`) widzi tylko gałąź `main`, na której działa
+też krok `image`. Rejestracja manifestu w gateway'u jest osobnym krokiem pipeline'u serwera, bo wymaga sekretu.
 
 ### Metryki do alertów
 
@@ -258,13 +280,12 @@ handshake'u. Pełne wywołanie narzędzia wymaga gateway'a z hosta (`mcp-gateway
 | `ToolSurfaceAndCredentialTest` | `tools/list`: 4 narzędzia, `additionalProperties: false`, limit dla każdego argumentu, hinty ryzyka, opisy bez instrukcji; nieznany argument i zły typ -> `invalid_argument` (bez nazwy argumentu w wyniku i logu); wzorce w schemacie = wzorce kontraktu; `user-oauth` w `Authorization`, PAT w `PRIVATE-TOKEN`, schemat niepasujący do typu -> `credential_required` (zdarzenie `credential_unsupported` w logu) bez wywołania GitLaba; poświadczenie i treść błędu GitLaba poza wynikiem i logiem |
 | `BackendResponseTest` | nieczytelna odpowiedź GitLaba, przekierowanie (nie podążamy, nie jest "brakiem"), timeout -> `upstream_unavailable`, odpowiedź ponad limit; treść odpowiedzi poza wynikiem i logiem |
 | `ProductionConfigurationTest` | domyślne typy produkcji `user-oauth,user-secret` w tej kolejności (zamiana daje czerwony test); `client-auth: need` poza `dev`, `https` dla GitLaba poza `dev` (wyjątek `ALLOW_PLAIN_HTTP`), `dev` tylko na pętli zwrotnej |
-| `DevProfileLoopbackTest` | `dev` na `0.0.0.0` nie wstaje |
-| `GatewayOnlyAccessTest` | bez JWT 401 (`tools/call`, `ping`, `initialize`), JWT dla innego serwera, innego narzędzia, wariant serwisowy i przeterminowany -> 401; bez JWT tylko health |
+| `DevProfileLoopbackTest` | reguła adresu `dev` (`assertDevProfileLoopbackRule`) i obecność guardów w kontekście serwera (`assertServerIsGuarded`) |
+| `GatewayOnlyAccessTest` | bez JWT 401 (`tools/call`, `ping`, `initialize`), JWT dla innego serwera, innego narzędzia, wariant serwisowy i przeterminowany -> 401; token z claimem `vs` albo `vsc` (usunięte w kontraktach 5.x) -> 401 bez dojścia do GitLaba; bez JWT tylko health |
 | `GitLabArgumentsTest` (mcp-tools) | wektory `resource-ids/gitlab-*.json` z kontraktu, limit ścieżki = limit kontraktu, ścieżka pliku, ref, iid, quick actions, `@all` |
-| `ResourcePolicyTest` | projekt z topikiem `restricted` -> `not_found_or_denied` identyczne jak dla nieistniejącego (odczyt i zapis); grupa nie jest klasyfikowana, także gdy GitLab poda dla niej topics (`hr`, `hr/payroll/team`); brak wywołań po grupy-przodków; projekt poza zakresem linku i zapis bez grantu zakresu odrzucone przed resolwerem (GitLab nie dostaje żadnego żądania); lista bez projektu zastrzeżonego i obcego; `access_denied` bez grupy; zawężenie linku do podgrupy; zakres zapisu |
+| `ResourcePolicyTest` | projekt z topikiem `restricted` -> `not_found_or_denied` identyczne jak dla nieistniejącego (odczyt i zapis); grupa nie jest klasyfikowana, także gdy GitLab poda dla niej topics (`hr`, `hr/payroll/team`); brak wywołań po grupy-przodków; zapis bez grantu zakresu odrzucony przed resolwerem (GitLab nie dostaje żadnego żądania); lista bez projektu zastrzeżonego i obcego; `access_denied` bez grupy; zakres zapisu |
 | `CredentialTypeTest` | OAuth w `Authorization: Bearer`, PAT w `PRIVATE-TOKEN`; `service-account` na każdym z 4 narzędzi i `token-exchange` -> `internal_error`; brak nagłówka typu, `User-OAuth` i nieznany typ -> `internal_error`; żądanie bez poświadczenia -> `credential_required`; w każdym przypadku odmowy GitLab nie dostaje żądania |
-| `ManifestArtifactTest` | (wykonanie `manifest-artifact`, faza `package`) plik `target/mcp-manifest.json` z wersją z pom i typami z `application.yml`, równy `GET /mcp-manifest`, bez `environment`, przechodzi `ManifestRules` |
-| `ManifestTest` | `/mcp-manifest` przechodzi `ManifestRules`, definicje = `tools/list`, `definitionHash`, tytuły, zamknięte schematy, `resourceRefs` i ryzyko |
+| `ManifestTest` | `/mcp-manifest` przechodzi `ManifestRules`, definicje = `tools/list`, `definitionHash`, tytuły, zamknięte schematy, `resourceRefs` i ryzyko; narzędzia z `ManifestExport` (plik z budowy) równe `tools/list`, bez `environment`, typy `user-oauth`, `user-secret` |
 | `GitLabServiceTest` (mcp-application) | filtr przestrzeni nazw, odczyt przy commicie, limity, wykrywanie binariów, merge request innego projektu |
 
 Nowe narzędzie dostaje test w tym samym stylu: klasa dziedziczy po `ServerTestSupport`, odpowiedź systemu

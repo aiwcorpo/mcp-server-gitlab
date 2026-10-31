@@ -139,17 +139,6 @@ class ResourcePolicyTest extends ServerTestSupport {
     }
 
     @Test
-    void aProjectOutsideTheLinkIsRefusedBeforeTheResolverAndLooksLikeAMissingOne() {
-        try (McpSyncClient client = clientAs(user -> { reader(user); user.virtualServer("sub-only", Map.of("gitlabGroups", List.of("team-a/sub"))); },
-                PAT, BackendCredential.Type.USER_SECRET)) {
-            assertNotFoundOrDenied(call(client, "get_file", file("team-a/app")));
-            assertNotFoundOrDenied(call(client, "get_merge_request", mergeRequest("team-a/app")));
-            assertNotFoundOrDenied(call(client, "get_file", file(MISSING_PROJECT)));
-        }
-        assertThat(BACKEND.requests()).as("no grant, so GitLab is not asked about the project").isEmpty();
-    }
-
-    @Test
     void aWriterWithoutAScopeGrantIsRefusedBeforeTheResolverAndNothingReachesGitLab() {
         try (McpSyncClient client = clientAs(user -> user.username("jkowalski").groups(List.of(READ_GROUP, WRITE_GROUP)), PAT,
                 BackendCredential.Type.USER_SECRET)) {
@@ -158,31 +147,4 @@ class ResourcePolicyTest extends ServerTestSupport {
         }
         assertThat(BACKEND.requests()).as("no grant on the project, so GitLab is not asked about it").isEmpty();
     }
-
-    @Test
-    void aLinkNarrowedToASubgroupHidesTheGroupAboveAndItsProjects() {
-        try (McpSyncClient client = clientAs(user -> { reader(user); user.virtualServer("sub-only", Map.of("gitlabGroups", List.of("team-a/sub"))); },
-                PAT, BackendCredential.Type.USER_SECRET)) {
-            McpSchema.CallToolResult missing = call(client, "list_projects", Map.of("group", MISSING_GROUP));
-
-            McpSchema.CallToolResult inside = call(client, "list_projects", Map.of("group", "team-a/sub"));
-            assertThat(inside.isError()).isFalse();
-            assertThat(text(inside)).contains("team-a/sub/deep");
-            assertThat(text(call(client, "list_projects", Map.of("group", "team-a")))).isEqualTo(text(missing));
-            assertThat(text(call(client, "get_merge_request", mergeRequest("team-a/app"))))
-                    .isEqualTo(text(call(client, "get_merge_request", mergeRequest(MISSING_PROJECT))));
-        }
-    }
-
-    @Test
-    void aLinkThatCoversTheGroupStillHidesTheProjectsTheLinkDoesNotCover() {
-        try (McpSyncClient client = clientAs(user -> { reader(user); user.virtualServer("a-only", Map.of("gitlabGroups", List.of("team-a"))); },
-                PAT, BackendCredential.Type.USER_SECRET)) {
-            McpSchema.CallToolResult result = call(client, "list_projects", Map.of("group", "team-a"));
-
-            assertThat(result.isError()).isFalse();
-            assertThat(text(result)).contains("team-a/app").doesNotContain("finance/secret", "secret-plans");
-        }
-    }
-
 }

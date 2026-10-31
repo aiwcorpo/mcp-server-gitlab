@@ -16,7 +16,7 @@ import pl.aiwcorpo.mcp.platform.input.SchemaLimitedToolCallbacks;
 public class McpToolsConfiguration {
 
     @Bean
-    ToolCallbackProvider mcpTools(GitLabTools gitLabTools) {
+    public ToolCallbackProvider mcpTools(GitLabTools gitLabTools) {
         return SchemaLimitedToolCallbacks.of(gitLabTools);
     }
 }
