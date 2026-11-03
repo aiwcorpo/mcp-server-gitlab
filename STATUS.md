@@ -1,5 +1,27 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
+## M6 etap 3: pełny serwer GitLab (2026-11-03)
+
+Starter 3.0.0-beta-13 (kontrakty 6.2.1). 30 narzędzi (20 `READ_ONLY`, 10 `UPDATE`), katalog w README i `docs/api/tools-catalog.md`.
+Merge i approve to `UPDATE` (W-8) i wymagają pełnego id commita (`expectedHeadSha`). Listy przez `PagedResult` i `CursorCodec`;
+`list_projects` zmienił kształt wyniku (`items`, `nextCursor`). Brak narzędzia typu dowolna ścieżka API lub GraphQL, brak
+zapisu do repozytorium, usuwania i uruchamiania pipeline'u ze zmiennymi.
+
+Wersje: zakres przetestowany 17.0 do 19.x, poza nim `degraded`. Sonda wersji nie trzyma sekretu: wersję poznaje pierwsze żądanie z
+poświadczeniem użytkownika (`GET /version`, odświeżane co godzinę); `CapabilityProbe` tylko raportuje to platformie. Jedyny adapter
+per wersja to filtr szkiców (`draft`, `wip`, lokalnie); pola przemianowane czytane z obu nazw.
+
+Przynależność: każdy identyfikator pod projektem adresowany ścieżką `/projects/:id/...` i potwierdzany odpowiedzią (`project_id`,
+`pipeline.project_id`, `noteable_iid`); log zadania czytany po potwierdzeniu zadania; ścieżka pliku porównana z nagłówkiem.
+
+Testy: 127 (mcp-app 110, mcp-tools 10, mcp-application 7). Atrapa `StubBackend` z fixtures `gitlab-17.8`, `gitlab-19.5`,
+`gitlab-legacy` (16.11) i `common`, pisanymi ręcznie z dokumentacji, nie nagranymi.
+
+Nie sprawdzone: działający GitLab (CE ani klienta), kształty odpowiedzi 19.x poza dokumentacją, kod odpowiedzi `approve` przy
+niezgodnym `sha` (atrapa: 409), dokładna reguła `401` przy `approve` i `merge` (obsłużona sprawdzeniem `GET /user`), widoczność
+logów zadań dla roli Reporter, obraz w pipeline'ie. Propozycja kontraktu: CC-216 (`GitLab::MergeRequest`); CC-215 dotyczy
+poświadczenia sondy.
+
 ## M5 (2026-10-31)
 
 Kamienie: starter 3.0.0-beta-10 (kontrakty 5.1.0) i README; testy odrzucenia tokenu z `vs` i `vsc` (`extraClaim`,

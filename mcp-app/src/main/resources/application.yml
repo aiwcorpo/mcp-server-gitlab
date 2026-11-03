@@ -47,6 +47,10 @@ aiwcorpo:
         # gateway resolves for GitLab: OAuth. A personal access token is accepted too. A request whose
         # X-MCP-Credential-Type is outside this list is refused by the starter (internal_error).
         accepted-credential-types: ${MCP_ACCEPTED_CREDENTIAL_TYPES:user-oauth,user-secret}
+      # HMAC key of the paging cursors (Base64, at least 32 bytes). Every instance behind the gateway must have the
+      # same one; without it each instance draws its own and a cursor issued by another instance is refused.
+      paging:
+        cursor-key: ${MCP_PAGING_CURSOR_KEY:}
 
 gitlab:
   backend:
@@ -55,6 +59,8 @@ gitlab:
     connect-timeout: 2s
     read-timeout: 10s
     max-response-size: 1MB
+    # GitLab cannot return only the end of a job log, so get_job_log reads the whole log (up to this size) to cut it.
+    max-log-size: ${MCP_GITLAB_MAX_LOG_SIZE:8MB}
     # Plain http outside 'dev' only for the mocks of mcp-platform-dev; never in a real deployment.
     allow-plain-http: ${MCP_GITLAB_ALLOW_PLAIN_HTTP:false}
   files:
