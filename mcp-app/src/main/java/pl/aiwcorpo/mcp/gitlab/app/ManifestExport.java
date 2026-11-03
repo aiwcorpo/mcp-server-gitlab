@@ -70,7 +70,7 @@ public final class ManifestExport {
 
         ToolRiskRegistry registry = new ToolRiskRegistry(ToolRiskRegistry.Unclassified.FAIL);
         List<McpServerFeatures.SyncToolSpecification> specifications = new ArrayList<>();
-        for (ToolCallback callback : new McpToolsConfiguration().mcpTools(new GitLabTools(null, null), new RepositoryTools(null, null),
+        for (ToolCallback callback : new McpToolsConfiguration().mcpTools(new GitLabTools(null, null, null), new RepositoryTools(null, null),
                 new MergeRequestTools(null, null, null), new IssueTools(null, null), new PipelineTools(null, null)).getToolCallbacks()) {
             registry.register(callback);
             specifications.add(McpToolUtils.toSyncToolSpecification(callback));

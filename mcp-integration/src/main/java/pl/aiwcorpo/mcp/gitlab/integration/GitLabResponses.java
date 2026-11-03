@@ -165,9 +165,9 @@ final class GitLabResponses {
             @JsonProperty("created_at") String createdAt, @JsonProperty("noteable_iid") Long noteableIid,
             @JsonProperty("project_id") Long projectId) {
 
-        /** A note that says it belongs to another project or another merge request or issue is not the caller's to read. */
+        /** A note counts only if it says it belongs to this project and this merge request or issue. */
         boolean belongsTo(long project, long iid) {
-            return (projectId == null || projectId == project) && (noteableIid == null || noteableIid == iid);
+            return projectId != null && projectId == project && noteableIid != null && noteableIid == iid;
         }
 
         NoteView toView() {
@@ -249,7 +249,13 @@ final class GitLabResponses {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record BlobHitResponse(String path, String filename, Long startline, String data) {
+    record BlobHitResponse(String path, String filename, Long startline, String data,
+            @JsonProperty("project_id") Long projectId) {
+
+        boolean belongsTo(long project) {
+            return projectId != null && projectId == project;
+        }
+
 
         CodeHit toDomain() {
             UntrustedText hitPath = plainPath(path != null ? path : filename);
@@ -306,6 +312,19 @@ final class GitLabResponses {
             return new PipelineJob(id, GitLabResponses.plainName(name), GitLabResponses.plainName(stage), status,
                     Boolean.TRUE.equals(allowFailure), createdAt, finishedAt, duration, webUrl);
         }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ApprovalsResponse(@JsonProperty("approved_by") List<ApproverResponse> approvedBy) {
+
+        boolean includes(String username) {
+            return approvedBy != null && approvedBy.stream().anyMatch(approver -> approver != null
+                    && approver.user() != null && username.equals(approver.user().username()));
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ApproverResponse(UserResponse user) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

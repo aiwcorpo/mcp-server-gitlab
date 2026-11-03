@@ -12,7 +12,9 @@ public class BackendRefusedException extends RuntimeException {
         /** 400, 405, 406, 422: not valid in the current state (draft, unresolved discussions, missing branch). */
         REJECTED,
         /** The job log is larger than the server reads. */
-        LOG_TOO_LARGE
+        LOG_TOO_LARGE,
+        /** A change was sent but GitLab's answer does not name this project, so the outcome is not known. */
+        UNCONFIRMED
     }
 
     private final Reason reason;

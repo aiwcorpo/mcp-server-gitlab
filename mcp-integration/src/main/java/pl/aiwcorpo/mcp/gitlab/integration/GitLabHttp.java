@@ -27,6 +27,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import pl.aiwcorpo.mcp.gitlab.core.domain.BackendPage;
+import pl.aiwcorpo.mcp.gitlab.core.domain.BackendRateLimitedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.BackendRefusedException;
 import pl.aiwcorpo.mcp.platform.security.BackendCredential;
 import pl.aiwcorpo.mcp.platform.security.CredentialContext;
@@ -53,6 +54,7 @@ public class GitLabHttp {
     private static final Logger LOG = LoggerFactory.getLogger(GitLabHttp.class);
 
     private final RestClient client;
+    private final RestClient jsonClient;
     private final RestClient logClient;
     private final GitLabBackendProperties properties;
 
@@ -61,6 +63,7 @@ public class GitLabHttp {
         String apiRoot = apiRoot(properties.baseUrl(), environment.matchesProfiles(DEV_PROFILE) || properties.allowPlainHttp());
         JdkClientHttpRequestFactory factory = requestFactory(properties, sslBundles);
         this.client = newClient(apiRoot, factory, properties.maxResponseSize().toBytes());
+        this.jsonClient = newClient(apiRoot, factory, properties.maxJsonSize().toBytes());
         this.logClient = newClient(apiRoot, factory, properties.maxLogSize().toBytes());
     }
 
@@ -75,6 +78,9 @@ public class GitLabHttp {
                     // Status only: the body and headers of a failed call may echo the credential or carry backend
                     // detail, and the exception message ends up in the starter's tool_failed log line.
                     HttpStatusCode status = response.getStatusCode();
+                    if (status.value() == 429) {
+                        throw new BackendRateLimitedException(retryAfter(response.getHeaders().getFirst("Retry-After")));
+                    }
                     if (status.is3xxRedirection()) {
                         // Redirects are not followed (the credential must not go elsewhere) and an empty body
                         // must not read as "not found": an SSO login page would turn into not_found_or_denied.
@@ -95,7 +101,7 @@ public class GitLabHttp {
     /** GET as the user; empty when GitLab does not show the thing. */
     <T> Optional<T> get(Class<T> type, GitLabQuery query) {
         BackendCredential credential = credential();
-        return visible(() -> client.get().uri(query.template(), query.variables())
+        return visible(() -> jsonClient.get().uri(query.template(), query.variables())
                 .headers(headers -> GitLabCredentials.apply(credential, headers))
                 .retrieve().body(type));
     }
@@ -104,7 +110,7 @@ public class GitLabHttp {
     <T> Optional<BackendPage<T>> getPage(ParameterizedTypeReference<List<T>> type, GitLabQuery query) {
         BackendCredential credential = credential();
         return visible(() -> {
-            ResponseEntity<List<T>> response = client.get().uri(query.template(), query.variables())
+            ResponseEntity<List<T>> response = jsonClient.get().uri(query.template(), query.variables())
                     .headers(headers -> GitLabCredentials.apply(credential, headers))
                     .retrieve().toEntity(type);
             List<T> items = response.getBody() == null ? List.of() : response.getBody();
@@ -166,7 +172,7 @@ public class GitLabHttp {
         BackendCredential credential = credential();
         try {
             return visible(() -> {
-                RestClient.RequestBodySpec request = client.method(method).uri(query.template(), query.variables())
+                RestClient.RequestBodySpec request = jsonClient.method(method).uri(query.template(), query.variables())
                         .headers(headers -> GitLabCredentials.apply(credential, headers));
                 if (body != null) {
                     request = request.contentType(MediaType.APPLICATION_JSON).body(body);
@@ -195,6 +201,25 @@ public class GitLabHttp {
             throw new BackendResponseException("empty body");
         }
         return response.getBody();
+    }
+
+    /**
+     * The answer to a change, if it names this project. A change is already made when the answer arrives, so an answer from
+     * another project is not a refusal: the outcome is unknown and the caller is told so with a fixed text.
+     */
+    static <T> T confirmed(T body, boolean belongsToProject) {
+        if (!belongsToProject) {
+            throw new BackendRefusedException(BackendRefusedException.Reason.UNCONFIRMED);
+        }
+        return body;
+    }
+
+    private static int retryAfter(String header) {
+        try {
+            return Math.min(3600, Math.max(1, Integer.parseInt(header.strip())));
+        } catch (RuntimeException unusable) {
+            return 30;
+        }
     }
 
     private boolean credentialStillWorks(BackendCredential credential) {

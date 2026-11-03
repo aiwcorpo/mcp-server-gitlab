@@ -46,7 +46,7 @@ public class MergeRequestTools {
     }
 
     @Tool(name = "list_merge_requests", description = "Lists the merge requests of a project, most recently updated "
-            + "first, 30 per page: number, title, state, draft flag, author, source and target branch, update time "
+            + "first, 20 per page: number, title, state, draft flag, author, source and target branch, update time "
             + "and web URL. Optionally limited by state, author, reviewer, labels (all of them), target branch and "
             + "draft status. Returns nextCursor when more merge requests exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
@@ -95,7 +95,7 @@ public class MergeRequestTools {
         return gitlab.getMergeRequest(ResolvedResources.project(GitLabArguments.project(project)), GitLabArguments.iid(iid));
     }
 
-    @Tool(name = "list_merge_request_diffs", description = "Returns the changes of a merge request, 20 files per page: "
+    @Tool(name = "list_merge_request_diffs", description = "Returns the changes of a merge request, 10 files per page: "
             + "old and new path, whether the file was added, renamed or deleted, and the diff text, cut at 16000 "
             + "characters per file. Returns truncated when a diff was cut and nextCursor when more files exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
@@ -117,7 +117,7 @@ public class MergeRequestTools {
     }
 
     @Tool(name = "list_merge_request_notes", description = "Lists the comments of a merge request in the order they were "
-            + "written, 20 per page: id, author, text (cut at 4000 characters), whether it is a system note "
+            + "written, 10 per page: id, author, text (cut at 4000 characters), whether it is a system note "
             + "(GitLab's own log line) and creation time. Returns truncated when a text was cut and nextCursor when "
             + "more notes exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
@@ -212,7 +212,7 @@ public class MergeRequestTools {
 
     @Tool(name = "approve_merge_request", description = "Approves a merge request of a GitLab project as the calling "
             + "user, for the head commit the caller names: GitLab refuses the approval when the source branch has "
-            + "moved on. The approval is a set, so a repeated call adds nothing. Returns the project, number, the "
+            + "moved on. A repeated call by the same user reports the existing approval of that commit. Returns the project, number, the "
             + "commit approved and the number of approvals GitLab reports.")
     @ToolRisk(RiskLevel.UPDATE)
     @ToolTitle("Zatwierdź merge request")
@@ -232,8 +232,8 @@ public class MergeRequestTools {
     @Tool(name = "merge_merge_request", description = "Merges a merge request of a GitLab project as the calling user, "
             + "for the head commit the caller names: GitLab refuses the merge when the source branch has moved on, "
             + "when the merge request is a draft or has unresolved blockers, or when the caller may not merge. "
-            + "A merge request that is already merged at that commit is reported as alreadyMerged, so a repeated "
-            + "call changes nothing. Returns the project, number, state, merge commit id and merge time.")
+            + "The source branch is never deleted by this call. A merge request that is already merged at that "
+            + "commit is reported as alreadyMerged, so a repeated call changes nothing. Returns the project, number, state, merge commit id and merge time.")
     @ToolRisk(RiskLevel.UPDATE)
     @ToolTitle("Scal merge request")
     public MergeOutcome mergeMergeRequest(
@@ -245,9 +245,8 @@ public class MergeRequestTools {
             @ToolParam(description = "Full 40 character id of the head commit of the source branch that was reviewed "
                     + "(headSha of get_merge_request)")
             @ArgumentLimits(minLength = 40, maxLength = 40, pattern = GitLabArguments.HEAD_SHA_PATTERN) String expectedHeadSha,
-            @ToolParam(description = "Squash the commits into one; the merge request's setting when omitted", required = false) Boolean squash,
-            @ToolParam(description = "Delete the source branch after the merge; the merge request's setting when omitted", required = false) Boolean removeSourceBranch) {
+            @ToolParam(description = "Squash the commits into one; the merge request's setting when omitted", required = false) Boolean squash) {
         return mergeRequests.merge(ResolvedResources.project(GitLabArguments.project(project)), GitLabArguments.iid(iid),
-                GitLabArguments.headSha(expectedHeadSha), squash, removeSourceBranch);
+                GitLabArguments.headSha(expectedHeadSha), squash);
     }
 }

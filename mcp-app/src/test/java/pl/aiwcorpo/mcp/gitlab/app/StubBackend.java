@@ -210,8 +210,11 @@ final class StubBackend {
         } else if (lower.equals("/api/v4/groups/hidden")) {
             json(exchange, 403, "{\"message\":\"403 Forbidden\"}");
         } else if (path.equals("/api/v4/groups/7/projects")) {
-            exchange.getResponseHeaders().set("X-Next-Page", "2");
-            exchange.getResponseHeaders().set("X-Page", "1");
+            // Always another page, so a listing that has to be filled keeps reading until its own limit.
+            Matcher requested = Pattern.compile("(?:^|&)page=(\\d+)").matcher(query == null ? "" : query);
+            int current = requested.find() ? Integer.parseInt(requested.group(1)) : 1;
+            exchange.getResponseHeaders().set("X-Next-Page", Integer.toString(current + 1));
+            exchange.getResponseHeaders().set("X-Page", Integer.toString(current));
             json(exchange, 200, """
                     [{"id":42,"description":"Main application","name":"App","path":"app","path_with_namespace":"team-a/app",
                       "default_branch":"main","archived":false,"last_activity_at":"2026-10-20T09:12:44.000Z","topics":["backend"],
@@ -372,7 +375,7 @@ final class StubBackend {
         json(exchange, 200, hasFixture(file) ? fixture(file) : "[]");
     }
 
-    private static final Pattern ITEM = Pattern.compile("(merge_requests|issues)/(\\d+)(?:/(notes|diffs|approve|merge))?");
+    private static final Pattern ITEM = Pattern.compile("(merge_requests|issues)/(\\d+)(?:/(notes|diffs|approve|approvals|merge))?");
     private static final Pattern PIPELINE_ITEM = Pattern.compile("pipelines/(\\d+)(?:/(jobs|retry|cancel))?");
     private static final Pattern JOB_ITEM = Pattern.compile("jobs/(\\d+)(/trace)?");
     private static final Pattern COMMIT_ITEM = Pattern.compile("repository/commits/([0-9a-f]+)(/diff)?");
@@ -403,6 +406,12 @@ final class StubBackend {
             } else {
                 json(exchange, 200, fixture("commit.json"));
             }
+        } else if (get && rest.equals("merge_requests") && query != null && query.contains("labels=big")) {
+            // Descriptions are cut by the server only after GitLab sent them whole: two long ones must not spoil the page.
+            String description = "word ".repeat(4_000);
+            json(exchange, 200, "[{\"id\":9101,\"iid\":101,\"project_id\":42,\"title\":\"Long one\",\"description\":\"" + description
+                    + "\",\"state\":\"opened\",\"draft\":false},{\"id\":9102,\"iid\":102,\"project_id\":42,\"title\":\"Long two\","
+                    + "\"description\":\"" + description + "\",\"state\":\"opened\",\"draft\":false}]");
         } else if (get && rest.equals("merge_requests")) {
             list(exchange, "merge_requests", query);
         } else if ("POST".equals(method) && rest.equals("merge_requests")) {
@@ -414,7 +423,8 @@ final class StubBackend {
                 json(exchange, 201, fixture("mr_created.json"));
             }
         } else if ("POST".equals(method) && rest.equals("issues")) {
-            json(exchange, 201, fixture("issue_created.json"));
+            // A title that asks for it gets an answer that names another project: the change is made, the outcome unknown.
+            json(exchange, 201, body.contains("foreign-answer") ? fixture("issue_foreign.json") : fixture("issue_created.json"));
         } else if (get && rest.equals("issues")) {
             list(exchange, "issues", query);
         } else if (ITEM.matcher(rest).matches()) {
@@ -460,6 +470,20 @@ final class StubBackend {
         } else if (mergeRequests && iid == 2 && "POST".equals(method) && "approve".equals(action)) {
             // The caller may not approve this one (own merge request): GitLab answers 401 although the token is fine.
             json(exchange, 401, "{\"message\":\"401 Unauthorized\"}");
+        } else if (mergeRequests && iid == 6) {
+            if (get && action == null) {
+                json(exchange, 200, "{\"id\":9006,\"iid\":6,\"project_id\":42,\"title\":\"Approved already\",\"state\":\"opened\","
+                        + "\"sha\":\"" + "6".repeat(40) + "\"}");
+            } else if (get && "approvals".equals(action)) {
+                json(exchange, 200, fixture("approved.json"));
+            } else if ("POST".equals(method) && "approve".equals(action)) {
+                json(exchange, 401, "{\"message\":\"401 Unauthorized\"}");
+            } else {
+                return false;
+            }
+        } else if (mergeRequests && iid == 10 && get) {
+            exchange.getResponseHeaders().set("Retry-After", "17");
+            json(exchange, 429, "{\"message\":\"Retry later\"}");
         } else if (mergeRequests && (iid == 7 || iid == 8) && get && action == null) {
             json(exchange, 200, fixture("mr_" + iid + ".json"));
         } else if (mergeRequests && (iid == 7 || iid == 8) && "PUT".equals(method) && "merge".equals(action)) {
@@ -508,13 +532,44 @@ final class StubBackend {
         } else if (!trace) {
             json(exchange, 200, fixture("job_" + id + ".json"));
         } else {
-            byte[] log = fixture("job_" + id + ".trace").getBytes(StandardCharsets.UTF_8);
+            byte[] log = trace(id).getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
             exchange.sendResponseHeaders(200, log.length);
             try (OutputStream out = exchange.getResponseBody()) {
                 out.write(log);
             }
         }
+    }
+
+    private static String join(String... parts) {
+        return String.join("", parts);
+    }
+
+    /**
+     * Job logs are built here, not kept as fixtures: the credentials in them are fake and put together from parts, so that no
+     * file of the repository looks like a leaked secret to a scanner, and the large log is not stored in git.
+     */
+    static String trace(int job) {
+        String esc = "\u001b";
+        if (job == 502) {
+            return "x\n".repeat(150_000);
+        }
+        StringBuilder log = new StringBuilder();
+        log.append("section_start:1762070405:prepare_script\r").append(esc).append("[0K").append(esc).append("[36;1m")
+                .append("Preparing the environment").append(esc).append("[0;m\n");
+        log.append("Cloning https://ci-user:").append("s3cr3t").append("passw0rd").append("@gitlab.aiwcorpo.internal/team-a/app.git\n");
+        log.append("token is ").append(join("gl", "pat-", "AbCdEfGhIjKlMnOp12")).append(" and the runner is ")
+                .append(join("GR1348941", "a".repeat(20))).append("\n");
+        log.append("curl -H 'Authorization: Bearer ").append(join("ey", "JhbGciOiJIUzI1NiJ9", ".payload", "000000.sig00")).append("' https://api\n");
+        log.append("PRIVATE-TOKEN: ").append(join("gl", "pat-", "Z".repeat(20))).append("\n");
+        log.append(join("-----BEGIN ", "RSA PRIVATE KEY-----")).append("\nMIIEowIBAAKCAQEA\n")
+                .append(join("-----END ", "RSA PRIVATE KEY-----")).append("\n");
+        log.append("section_end:1762070406:prepare_script\r").append(esc).append("[0K\n");
+        for (int i = 1; i <= 400; i++) {
+            log.append("test line ").append(i).append('\n');
+        }
+        log.append(esc).append("[31;1mERROR: Job failed: exit code 1").append(esc).append("[0;m\n");
+        return log.toString();
     }
 
     private void file(HttpExchange exchange, String method, String rest, String query) throws IOException {

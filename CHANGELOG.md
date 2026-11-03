@@ -13,5 +13,8 @@
   `update_issue`, `comment_issue`, `retry_pipeline`, `cancel_pipeline`.
 - `list_projects` returns `PagedResult` (`items`, `nextCursor`, `truncated`, `omitted`) with a cursor instead of
   `{group, projects, truncated}`; `get_merge_request` adds `mergedBy` and `headSha`. Breaking for clients.
-- New settings `MCP_PAGING_CURSOR_KEY` and `MCP_GITLAB_MAX_LOG_SIZE`.
+- New settings `MCP_PAGING_CURSOR_KEY`, `MCP_GITLAB_MAX_JSON_SIZE` and `MCP_GITLAB_MAX_LOG_SIZE`.
+- `merge_merge_request` has no `removeSourceBranch`: it never deletes the source branch. `approve_merge_request` reports an existing
+  approval of the same user. `list_projects` fills its page (`PageFiller`). `429` is `rate_limited`; a change whose answer names
+  another project is `upstream_unavailable` with a fixed text. Job log masking is bounded in time and covers more shapes.
 - Apache-2.0 `LICENSE` and `NOTICE`, `SECURITY.md`, `CONTRIBUTING.md`.

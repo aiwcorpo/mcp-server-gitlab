@@ -17,6 +17,7 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequestSummary;
 import pl.aiwcorpo.mcp.gitlab.core.domain.NoteView;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.MergeRequestPort;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.ApprovalResponse;
+import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.ApprovalsResponse;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.DiffResponse;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.MergeRequestResponse;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.NoteResponse;
@@ -28,9 +29,9 @@ import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.NoteResponse;
 @Component
 public class MergeRequestRestAdapter implements MergeRequestPort {
 
-    static final int LIST_PAGE = 30;
-    static final int NOTE_PAGE = 20;
-    static final int DIFF_PAGE = 20;
+    static final int LIST_PAGE = 20;
+    static final int NOTE_PAGE = 10;
+    static final int DIFF_PAGE = 10;
 
     private static final ParameterizedTypeReference<List<MergeRequestResponse>> MERGE_REQUESTS = new ParameterizedTypeReference<>() {
     };
@@ -101,7 +102,8 @@ public class MergeRequestRestAdapter implements MergeRequestPort {
         }
         return http.send(HttpMethod.POST, MergeRequestResponse.class, body,
                         new GitLabQuery("/projects/{id}/merge_requests").with("id", projectId), false)
-                .map(GitLabHttp::bodyOf).filter(mr -> mr.projectId() == projectId).map(MergeRequestResponse::toChange);
+                .map(GitLabHttp::bodyOf).map(mr -> GitLabHttp.confirmed(mr, mr.projectId() == projectId))
+                .map(MergeRequestResponse::toChange);
     }
 
     @Override
@@ -122,34 +124,58 @@ public class MergeRequestRestAdapter implements MergeRequestPort {
         }
         return http.send(HttpMethod.PUT, MergeRequestResponse.class, body,
                         new GitLabQuery("/projects/{id}/merge_requests/{iid}").with("id", projectId).with("iid", iid), false)
-                .map(GitLabHttp::bodyOf).filter(mr -> mr.projectId() == projectId).map(MergeRequestResponse::toChange);
+                .map(GitLabHttp::bodyOf).map(mr -> GitLabHttp.confirmed(mr, mr.projectId() == projectId))
+                .map(MergeRequestResponse::toChange);
     }
 
     @Override
     public Optional<ApprovalResult> approve(long projectId, long iid, String expectedHeadSha) {
-        return http.send(HttpMethod.POST, ApprovalResponse.class, Map.of("sha", expectedHeadSha),
+        Optional<ApprovalResult> approved = http.send(HttpMethod.POST, ApprovalResponse.class, Map.of("sha", expectedHeadSha),
                         new GitLabQuery("/projects/{id}/merge_requests/{iid}/approve").with("id", projectId).with("iid", iid),
                         true)
                 .map(response -> new ApprovalResult(null, iid, expectedHeadSha,
                         response.getBody() == null ? null : response.getBody().approvals()));
+        return approved.isPresent() ? approved : alreadyApprovedByTheCaller(projectId, iid, expectedHeadSha);
+    }
+
+    /**
+     * GitLab answers a second approval by the same user with the 401 it uses for "may not approve", which reads as a
+     * denial. When the approval did not go through, the merge request is looked at once: if the caller is among the
+     * approvers of this very head commit, the state the caller asked for exists and is reported.
+     */
+    private Optional<ApprovalResult> alreadyApprovedByTheCaller(long projectId, long iid, String expectedHeadSha) {
+        Optional<MergeRequestResponse> mergeRequest = http.get(MergeRequestResponse.class,
+                new GitLabQuery("/projects/{id}/merge_requests/{iid}").with("id", projectId).with("iid", iid));
+        if (mergeRequest.isEmpty() || mergeRequest.get().projectId() != projectId
+                || !expectedHeadSha.equals(mergeRequest.get().sha())) {
+            return Optional.empty();
+        }
+        Optional<String> caller = http.get(GitLabResponses.UserResponse.class, new GitLabQuery("/user"))
+                .map(GitLabResponses.UserResponse::username);
+        Optional<ApprovalsResponse> approvals = http.get(ApprovalsResponse.class,
+                new GitLabQuery("/projects/{id}/merge_requests/{iid}/approvals").with("id", projectId).with("iid", iid));
+        if (caller.isPresent() && approvals.isPresent() && approvals.get().includes(caller.get())) {
+            return Optional.of(new ApprovalResult(null, iid, expectedHeadSha, approvals.get().approvedBy().size()));
+        }
+        return Optional.empty();
     }
 
     @Override
-    public Optional<MergeOutcome> merge(long projectId, long iid, String expectedHeadSha, @Nullable Boolean squash,
-            @Nullable Boolean removeSourceBranch) {
+    public Optional<MergeOutcome> merge(long projectId, long iid, String expectedHeadSha, @Nullable Boolean squash) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("sha", expectedHeadSha);
         if (squash != null) {
             body.put("squash", squash);
         }
-        if (removeSourceBranch != null) {
-            body.put("should_remove_source_branch", removeSourceBranch);
-        }
+        // Explicit false: a merge through this server never deletes a branch. Deleting the source branch of a merge
+        // request from a fork would be a write in a project the policy did not judge. (A project that deletes source
+        // branches by its own setting is outside the server's control.)
+        body.put("should_remove_source_branch", false);
         return http.send(HttpMethod.PUT, MergeRequestResponse.class, body,
                         new GitLabQuery("/projects/{id}/merge_requests/{iid}/merge").with("id", projectId).with("iid", iid),
                         true)
                 .map(GitLabHttp::bodyOf)
-                .filter(merged -> merged.projectId() == projectId)
+                .map(merged -> GitLabHttp.confirmed(merged, merged.projectId() == projectId))
                 .map(merged -> new MergeOutcome(null, iid, merged.state(), merged.mergeCommitSha(), merged.mergedAt(), false));
     }
 }

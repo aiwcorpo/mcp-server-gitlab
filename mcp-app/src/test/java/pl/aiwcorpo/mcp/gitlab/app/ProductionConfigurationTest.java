@@ -81,7 +81,7 @@ class ProductionConfigurationTest {
         assertThatCode(() -> adapter("https://backend.internal", new MockEnvironment())).doesNotThrowAnyException();
 
         assertThatCode(() -> new GitLabHttp(
-                new GitLabBackendProperties("http://gitlab.internal:8080", null, null, null, null, null, true),
+                new GitLabBackendProperties("http://gitlab.internal:8080", null, null, null, null, null, null, true),
                 new DefaultListableBeanFactory().getBeanProvider(SslBundles.class), new MockEnvironment()))
                 .as("explicit opt-in for the dev environment's mocks").doesNotThrowAnyException();
 
@@ -98,7 +98,7 @@ class ProductionConfigurationTest {
     }
 
     private static GitLabHttp adapter(String baseUrl, MockEnvironment environment) {
-        return new GitLabHttp(new GitLabBackendProperties(baseUrl, null, null, null, null, null, false),
+        return new GitLabHttp(new GitLabBackendProperties(baseUrl, null, null, null, null, null, null, false),
                 new DefaultListableBeanFactory().getBeanProvider(SslBundles.class), environment);
     }
 }

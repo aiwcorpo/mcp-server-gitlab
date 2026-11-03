@@ -42,7 +42,7 @@ Trzydzieści narzędzi: 20 do odczytu (`READ_ONLY`) i 10 zmieniających (`UPDATE
 
 | Narzędzie | Tytuł | Ryzyko | Akcja | Uprawnienie (C9) | Argumenty | Wynik |
 | --- | --- | --- | --- | --- | --- | --- |
-| `list_projects` | Lista projektów grupy | `READ_ONLY` | `read` | `mcp-gitlab-read` | `group`, `cursor?` | strona projektów bezpośrednio w grupie (nie z podgrup, nie udostępnionych), 100 na stronę: ścieżka, nazwa, opis, gałąź domyślna, archived, ostatnia aktywność, adres |
+| `list_projects` | Lista projektów grupy | `READ_ONLY` | `read` | `mcp-gitlab-read` | `group`, `cursor?` | projekty bezpośrednio w grupie (nie z podgrup, nie udostępnionych), strona GitLaba po 100, dopełniana kolejnymi (najwyżej 3 odczyty) do 50 dozwolonych, żeby ukrycie kilku nie było widać jako krótka strona: ścieżka, nazwa, opis, gałąź domyślna, archived, ostatnia aktywność, adres |
 | `get_project` | Pobierz projekt | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project` | ścieżka, nazwa, opis, gałąź domyślna, widoczność, archived, ostatnia aktywność, adres |
 | `get_file` | Pobierz plik z repozytorium | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `path`, `ref?` | plik UTF-8 przy commicie z HEAD refa, `hiddenCharactersRemoved`; binarny albo większy niż `MCP_GITLAB_FILE_MAX_BYTES` -> `invalid_argument` bez treści |
 | `list_repository_tree` | Zawartość katalogu repozytorium | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `path?`, `ref?`, `cursor?` | jeden poziom katalogu, 100 na stronę: ścieżka i typ (`blob`, `tree`, `commit`) |
@@ -50,17 +50,17 @@ Trzydzieści narzędzi: 20 do odczytu (`READ_ONLY`) i 10 zmieniających (`UPDATE
 | `list_branches` | Lista gałęzi | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `search?`, `cursor?` | 50 na stronę: nazwa, domyślna, chroniona, scalona, ostatni commit |
 | `list_commits` | Lista commitów | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `ref?`, `path?`, `since?`, `until?`, `cursor?` | 50 na stronę: id, tytuł, autor, czas, adres; filtry ref, ścieżka, okres |
 | `get_commit` | Pobierz commit | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `sha` (7-40 znaków hex) | id, tytuł, pełny komunikat, autor, czas, liczba dodanych i usuniętych linii |
-| `get_commit_diff` | Zmiany w commicie | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `sha`, `cursor?` | 20 plików na stronę: ścieżki, flagi nowy/przeniesiony/usunięty, diff ucięty do 16000 znaków na plik |
-| `list_merge_requests` | Lista merge requestów | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `state?`, `author?`, `reviewer?`, `labels?`, `targetBranch?`, `draft?`, `cursor?` | 30 na stronę, od ostatnio zmienionych; filtry: stan, autor, recenzent, etykiety (wszystkie), gałąź docelowa, szkic |
+| `get_commit_diff` | Zmiany w commicie | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `sha`, `cursor?` | 10 plików na stronę: ścieżki, flagi nowy/przeniesiony/usunięty, diff ucięty do 16000 znaków na plik |
+| `list_merge_requests` | Lista merge requestów | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `state?`, `author?`, `reviewer?`, `labels?`, `targetBranch?`, `draft?`, `cursor?` | 20 na stronę, od ostatnio zmienionych; filtry: stan, autor, recenzent, etykiety (wszystkie), gałąź docelowa, szkic |
 | `get_merge_request` | Pobierz merge request | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `iid` | tytuł, opis, stan, szkic, gałęzie, autor, osoby, etykiety, czasy, status scalenia, konflikt, kto scalił, `headSha`, adres |
 | `list_merge_request_diffs` | Zmiany w merge requeście | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `iid`, `cursor?` | jak `get_commit_diff`, dla merge requesta |
-| `list_merge_request_notes` | Komentarze merge requesta | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `iid`, `cursor?` | 20 na stronę, w kolejności napisania: autor, treść (do 4000 znaków), notatka systemowa, czas |
+| `list_merge_request_notes` | Komentarze merge requesta | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `iid`, `cursor?` | 10 na stronę, w kolejności napisania: autor, treść (do 4000 znaków), notatka systemowa, czas |
 | `comment_merge_request` | Dodaj komentarz do merge requesta | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `iid`, `body` | `{project, mergeRequestIid, noteId, author, createdAt}`; powtórzenie dubluje komentarz |
 | `create_merge_request` | Utwórz merge request | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `sourceBranch`, `targetBranch`, `title`, `description?` | projekt, numer, tytuł, stan, szkic, adres; GitLab odrzuca drugi otwarty MR dla tych samych gałęzi, więc powtórzenie nic nie zmienia |
 | `update_merge_request` | Zmień merge request | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `iid`, `title?`, `description?`, `labels?`, `targetBranch?` | tytuł, opis, etykiety (pełny zbiór), gałąź docelowa; stan docelowy, powtórzenie nic nie zmienia |
-| `approve_merge_request` | Zatwierdź merge request | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `iid`, `expectedHeadSha` (40 znaków hex) | zatwierdzenie dla wskazanego commita; zbiór zatwierdzających, powtórzenie nic nie dodaje |
-| `merge_merge_request` | Scal merge request | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `iid`, `expectedHeadSha`, `squash?`, `removeSourceBranch?` | scalenie dla wskazanego commita (UPDATE wg decyzji W-8); już scalony na tym commicie -> `alreadyMerged: true` |
-| `list_issues` | Lista zgłoszeń | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `state?`, `author?`, `assignee?`, `labels?`, `search?`, `cursor?` | 30 na stronę; filtry: stan, autor, przypisany, etykiety, słowo w tytule i opisie |
+| `approve_merge_request` | Zatwierdź merge request | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `iid`, `expectedHeadSha` (40 znaków hex) | zatwierdzenie dla wskazanego commita; powtórzenie tego samego użytkownika zwraca istniejące zatwierdzenie (GitLab odpowiada na nie 401, serwer sprawdza zatwierdzających) |
+| `merge_merge_request` | Scal merge request | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `iid`, `expectedHeadSha`, `squash?` | scalenie dla wskazanego commita (UPDATE wg decyzji W-8), nigdy nie usuwa gałęzi źródłowej; już scalony na tym commicie -> `alreadyMerged: true` |
+| `list_issues` | Lista zgłoszeń | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `state?`, `author?`, `assignee?`, `labels?`, `search?`, `cursor?` | 20 na stronę; filtry: stan, autor, przypisany, etykiety, słowo w tytule i opisie |
 | `get_issue` | Pobierz zgłoszenie | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `iid` | tytuł, opis, stan, typ, autor, osoby, etykiety, czasy, adres |
 | `list_issue_notes` | Komentarze zgłoszenia | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `iid`, `cursor?` | jak `list_merge_request_notes`, dla zgłoszenia |
 | `create_issue` | Utwórz zgłoszenie | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `title`, `description?`, `labels?` | projekt, numer, tytuł, stan, adres; powtórzenie tworzy kolejne zgłoszenie |
@@ -69,7 +69,7 @@ Trzydzieści narzędzi: 20 do odczytu (`READ_ONLY`) i 10 zmieniających (`UPDATE
 | `list_pipelines` | Lista pipeline'ów | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `ref?`, `status?`, `cursor?` | 30 na stronę, od najnowszych: id, status, źródło, ref, commit, kto uruchomił, czasy, czas trwania, adres; filtry ref i status |
 | `get_pipeline` | Pobierz pipeline | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `pipelineId` | jak wiersz `list_pipelines` |
 | `list_pipeline_jobs` | Zadania pipeline'u | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `pipelineId`, `cursor?` | 100 na stronę: id, nazwa, etap, status, czy porażka dozwolona, czasy, adres |
-| `get_job_log` | Log zadania CI | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `jobId`, `lines?` | ostatnie linie logu (domyślnie 200, najwyżej 2000, do 60000 znaków), bez kodów ANSI, z `[redacted]` w miejscu tokenów GitLaba, nagłówków `Authorization`, haseł w URL i kluczy prywatnych; `redactions` to liczba zamian; log większy niż `MCP_GITLAB_MAX_LOG_SIZE` jest odrzucany |
+| `get_job_log` | Log zadania CI | `READ_ONLY` | `read` | `mcp-gitlab-read` | `project`, `jobId`, `lines?` | ostatnie linie logu (domyślnie 200, najwyżej 2000, do 60000 znaków), bez kodów ANSI, z `[redacted]` w miejscu tokenów GitLaba, nagłówków `Authorization`, haseł w URL i kluczy prywatnych; `redactions` to liczba zamian; log większy niż `MCP_GITLAB_MAX_LOG_SIZE` jest odrzucany; maskowanie to heurystyka, nie gwarancja (niżej) |
 | `retry_pipeline` | Ponów nieudane zadania pipeline'u | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `pipelineId` | ponawia nieudane i anulowane zadania; pozostałe zostają, więc powtórzenie nie startuje pipeline od nowa |
 | `cancel_pipeline` | Anuluj pipeline | `UPDATE` | `update` | `mcp-gitlab-write` | `project`, `pipelineId` | anuluje trwające zadania; zakończony pipeline zostaje bez zmian |
 
@@ -85,7 +85,7 @@ Czego serwer celowo nie ma: wywołania dowolnej ścieżki API ani GraphQL, wyszu
 pipeline'u ani zadań ręcznych (zmienne CI uruchamiają dowolne dane na runnerach projektu), zapisu do repozytorium
 (commity, gałęzie, pliki) i usuwania czegokolwiek. `merge_merge_request` i `approve_merge_request` są `UPDATE`
 (decyzja W-8): zmieniają merge request w imieniu użytkownika, a wymagania GitLaba (rola, wynik pipeline'u, liczba
-zatwierdzeń, chroniona gałąź) nadal obowiązują. Oba wymagają pełnego id commita (`expectedHeadSha`, w `headSha` z
+zatwierdzeń, chroniona gałąź) nadal obowiązują. `merge_merge_request` nigdy nie usuwa gałęzi źródłowej (wysyła `should_remove_source_branch=false`; usunięcie gałęzi z forka byłoby zapisem w projekcie, którego polityka nie oceniała; ustawienie projektu "usuń gałąź po scaleniu" poza kontrolą serwera). Oba wymagają pełnego id commita (`expectedHeadSha`, w `headSha` z
 `get_merge_request`): gałąź, która ruszyła po recenzji, kończy się odmową GitLaba (`invalid_argument`, stały tekst o
 konflikcie ze stanem projektu), a nie zatwierdzeniem czy scaleniem niewidzianej zmiany.
 
@@ -103,8 +103,35 @@ samym commicie, `retry_pipeline` i `cancel_pipeline` działają na zadaniach w d
 `409` (zmieniony commit, drugi otwarty MR) i `400`, `405`, `406`, `422` (szkic, nierozwiązane blokady, brak gałęzi) to
 `invalid_argument` ze stałym tekstem, bez treści odpowiedzi GitLaba. `404` i `403` to `not_found_or_denied`, także dla tokenu
 z samym `read_api` użytego do zapisu (GitLab odpowiada `403 insufficient_scope`). `approve` i `merge` GitLab odpowiada `401`, gdy
-użytkownik nie może ich wykonać (własny merge request, brak roli); serwer sprawdza wtedy raz `GET /user` tym samym tokenem:
-działający token to `not_found_or_denied`, wygasły to `credential_required`.
+użytkownik nie może ich wykonać (własny merge request, brak roli, a przy `approve` także gdy już zatwierdził); serwer sprawdza wtedy
+raz `GET /user` tym samym tokenem: wygasły to `credential_required`; działający to `not_found_or_denied`, chyba że `approve`
+znajdzie wywołującego wśród zatwierdzających ten sam commit (`GET .../approvals`), co jest wynikiem sukcesu. Kształt odpowiedzi
+GitLaba na powtórzone zatwierdzenie nie był sprawdzony na żywej instancji (patrz STATUS).
+
+### Maskowanie logów zadań to najlepszy wysiłek
+
+`get_job_log` usuwa kody ANSI i znaczniki sekcji, a potem zastępuje `[redacted]` kształty rozpoznawalne bez znajomości sekretu:
+tokeny GitLaba (`glpat-`, `gloas-` i pokrewne), GitHuba (`ghp_`, `github_pat_`), Slacka (`xox*-`), klucze AWS, tokeny JWT,
+hasła w adresach dowolnego schematu (`postgres://u:p@host`), nagłówki `Authorization` i `PRIVATE-TOKEN` także w JSON,
+przypisania do nazw z `PASSWORD`, `SECRET`, `TOKEN`, `API_KEY`, `docker login -p`, `curl -u` i bloki kluczy prywatnych.
+Sekret w innym kształcie przejdzie. Log pisze każdy, kto może uruchomić zadanie w projekcie, więc jest daną niezaufaną
+(`untrusted-data`) i nie jest dowodem na to, że nie zawierał sekretu. Maskowanie działa na ostatnich 400000 znakach logu
+(wszystkie wyrażenia mają ograniczone kwantyfikatory, bez lookbehindu), więc czas nie zależy od rozmiaru logu; `redactions` to
+liczba zamian.
+
+### Rozmiar odpowiedzi GitLaba
+
+GitLab zwraca w listach pełne opisy i diffy (opis może mieć milion znaków), a serwer tnie każdy tekst do własnego limitu
+dopiero po odczycie. Dlatego odpowiedzi JSON (listy i pojedyncze obiekty) mają osobny, większy limit
+`MCP_GITLAB_MAX_JSON_SIZE` (8 MB), strony z długimi elementami są małe (diffy 10 plików, notatki 10, merge requesty i
+zgłoszenia 20), a limit `gitlab.backend.max-response-size` (1 MB) dotyczy już tylko treści plików. Strona, której elementy
+razem przekraczają limit JSON, kończy się `internal_error`.
+
+### Zmiana, której wyniku nie da się potwierdzić
+
+Odpowiedź na zapis, która nie nazywa tego projektu (`project_id`), nie jest odmową: zmiana już zaszła. Serwer odpowiada wtedy
+`upstream_unavailable` ze stałym tekstem, że zmiana mogła zostać zapisana i trzeba sprawdzić stan przed powtórzeniem.
+`429` GitLaba to `rate_limited` z `retryAfterSeconds` z jego nagłówka `Retry-After`.
 
 ### Przynależność do projektu
 
@@ -270,6 +297,7 @@ wyłącza TLS i mTLS, trzyma `jti` w pamięci i dopuszcza klucze testowe; starte
 | `MCP_GITLAB_ALLOW_PLAIN_HTTP` | `true` dopuszcza `http` poza `dev`, wyłącznie dla mocków `mcp-platform-dev` (poświadczenie idzie wtedy otwartym tekstem; ostrzeżenie w logu) | `false` |
 | `MCP_GITLAB_SSL_BUNDLE` | bundle SSL dla HTTPS GitLaba, np. `mcp-internal-ca`; puste = zaufanie JDK | puste |
 | `MCP_GITLAB_FILE_MAX_BYTES` | największy plik zwracany przez `get_file`; nie może przekraczać `gitlab.backend.max-response-size` (1 MB) ani 400 KiB (treść po escapowaniu JSON musi zmieścić się w wyniku 1 MiB), inaczej serwer nie wstaje | `262144` |
+| `MCP_GITLAB_MAX_JSON_SIZE` | największa odpowiedź JSON GitLaba (lista albo obiekt); patrz "Rozmiar odpowiedzi GitLaba" | `8MB` |
 | `MCP_GITLAB_MAX_LOG_SIZE` | największy log zadania, który `get_job_log` czyta, żeby uciąć jego koniec (GitLab nie zwraca samego końca); większy log jest odrzucany | `8MB` |
 | `MCP_PAGING_CURSOR_KEY` | klucz HMAC kursorów (Base64, min. 32 bajty, `openssl rand -base64 32`); taki sam na każdej instancji; bez niego każda losuje własny i kursor z innej instancji jest odrzucany | puste |
 | `MCP_REDIS_HOST`, `MCP_REDIS_PORT`, `MCP_REDIS_USER`, `MCP_REDIS_PASSWORD` | Redis dla jednorazowego `jti` (użytkownik ACL `mcp-gitlab`, klucze `jti:mcp-gitlab:*`) | `localhost`, `6379`, `mcp-gitlab`, puste |
@@ -409,6 +437,8 @@ handshake'u. Pełne wywołanie narzędzia wymaga gateway'a z hosta (`mcp-gateway
 | `GetFileToolTest` | ścieżka pliku zakodowana jako jeden segment, treść przy commicie z HEAD, przeniesiony projekt -> ścieżka kanoniczna, gałąź domyślna, treść jako `untrusted-data`, plik binarny i za duży bez treści (duży nie jest pobierany), 404 = 403, walidacja `project`/`path`/`ref` |
 | `GetMergeRequestToolTest` | tylko pola domeny, tytuł, opis, gałęzie, etykiety i użytkownicy jako `untrusted-data` z formatem, brak poświadczenia i 401, 404 = 403, walidacja `iid` (zakres, `long`, typ) i `project` |
 | `CommentMergeRequestToolTest` | notatka wysłana jako użytkownik (POST, treść), wynik bez echa treści, brak poświadczenia i 401, 404 = 403 (bez POST dla niewidocznego projektu), quick actions i limity odrzucone przed GitLabem |
+| `OutOfReachTest` | po jednym przebiegu dla każdego z 30 narzędzi: projekt (albo grupa) niedostępny, nieistniejący lub zastrzeżony -> `not_found_or_denied`, tylko `GET` i żadnego wywołania pod `/projects/:id/` |
+| `JobLogTextTest` (mcp-application) | kształty sekretów w logu, ANSI i sekcje, ogon logu, logi o rozmiarze limitu (8 MB) o wrogiej treści maskowane w czasie poniżej progu |
 | `RepositoryToolsTest` | projekt, drzewo, wyszukiwanie w kodzie (zakres projektu, kursor związany z zapytaniem, sfałszowany kursor), gałęzie, commity, diff z ucięciem i licznikiem ukrytych znaków, zastrzeżony projekt zamknięty dla odczytu i zapisu |
 | `MergeRequestToolsTest` | lista w kształcie 17.8 i 19.5, filtr szkiców wg wersji (`wip`, `draft`, lokalnie dla wersji spoza zakresu), wersja poznana z poświadczenia użytkownika, pola przemianowane, notatki innego MR odrzucone, create/update/approve/merge z odmowami (409, 400, 405, 401 z tokenem działającym i wygasłym), `alreadyMerged`, zapis bez grupy zapisu |
 | `IssueToolsTest` | lista bez zgłoszeń innego projektu, zgłoszenie innego projektu = `not_found_or_denied`, notatki, create/update/comment, quick actions i `@all` odrzucone |

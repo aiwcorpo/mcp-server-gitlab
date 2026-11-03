@@ -77,7 +77,8 @@ public class PipelineRestAdapter implements PipelinePort {
         return http.send(HttpMethod.POST, PipelineResponse.class, null,
                         new GitLabQuery("/projects/{id}/pipelines/{pid}/retry").with("id", projectId).with("pid", pipelineId),
                         false)
-                .map(GitLabHttp::bodyOf).filter(pipeline -> pipeline.belongsTo(projectId)).map(PipelineResponse::toDomain);
+                .map(GitLabHttp::bodyOf).map(pipeline -> GitLabHttp.confirmed(pipeline, pipeline.belongsTo(projectId)))
+                .map(PipelineResponse::toDomain);
     }
 
     @Override
@@ -85,7 +86,8 @@ public class PipelineRestAdapter implements PipelinePort {
         return http.send(HttpMethod.POST, PipelineResponse.class, null,
                         new GitLabQuery("/projects/{id}/pipelines/{pid}/cancel").with("id", projectId).with("pid", pipelineId),
                         false)
-                .map(GitLabHttp::bodyOf).filter(pipeline -> pipeline.belongsTo(projectId)).map(PipelineResponse::toDomain);
+                .map(GitLabHttp::bodyOf).map(pipeline -> GitLabHttp.confirmed(pipeline, pipeline.belongsTo(projectId)))
+                .map(PipelineResponse::toDomain);
     }
 
     /** A log is text, but a runner can write any bytes into it; those become the replacement character. */

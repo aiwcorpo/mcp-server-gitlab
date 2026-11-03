@@ -73,10 +73,9 @@ public class MergeRequestService implements MergeRequestUseCase {
      * like a failure). Any other refusal stays one.
      */
     @Override
-    public MergeOutcome merge(GitLabProject project, long iid, String expectedHeadSha, @Nullable Boolean squash,
-            @Nullable Boolean removeSourceBranch) {
+    public MergeOutcome merge(GitLabProject project, long iid, String expectedHeadSha, @Nullable Boolean squash) {
         try {
-            return mergeRequests.merge(project.id(), iid, expectedHeadSha, squash, removeSourceBranch)
+            return mergeRequests.merge(project.id(), iid, expectedHeadSha, squash)
                     .orElseThrow(ResourceNotFoundException::new)
                     .inProject(project.pathWithNamespace());
         } catch (BackendRefusedException refused) {

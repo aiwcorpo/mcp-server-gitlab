@@ -12,8 +12,10 @@ import pl.aiwcorpo.mcp.platform.guard.ToolRisk;
 import pl.aiwcorpo.mcp.platform.guard.ToolTitle;
 import pl.aiwcorpo.mcp.platform.input.ArgumentLimits;
 import pl.aiwcorpo.mcp.platform.paging.CursorCodec;
+import pl.aiwcorpo.mcp.platform.paging.PageFiller;
 import pl.aiwcorpo.mcp.platform.paging.PagedResult;
 import pl.aiwcorpo.mcp.platform.resource.ResourceRef;
+import pl.aiwcorpo.mcp.platform.resource.ResultFilter;
 
 /**
  * The tools that start from a group, and the one that reads a file. Every argument is untrusted input from a model: it
@@ -32,12 +34,19 @@ public class GitLabTools {
     static final String PROJECT_PARAM = "Full path of the project, e.g. team-a/app";
     static final String CURSOR_PARAM = "nextCursor of the previous result, to get the next page; omit for the first page";
 
+    /** Most pages of GitLab one call reads to fill its page; a group almost never needs a second. */
+    private static final int FILL_READS = 3;
+    /** The page is filled to this many allowed projects, so that hiding a few of a hundred does not show as a short page. */
+    private static final int FILL_TO = 50;
+
     private final GitLabUseCase gitlab;
     private final PageCursors cursors;
+    private final ResultFilter resultFilter;
 
-    public GitLabTools(GitLabUseCase gitlab, PageCursors cursors) {
+    public GitLabTools(GitLabUseCase gitlab, PageCursors cursors, ResultFilter resultFilter) {
         this.gitlab = gitlab;
         this.cursors = cursors;
+        this.resultFilter = resultFilter;
     }
 
     @Tool(name = "list_projects", description = "Lists the projects directly in one GitLab group (not in its "
@@ -54,8 +63,16 @@ public class GitLabTools {
             @ArgumentLimits(maxLength = CursorCodec.MAX_CURSOR_LENGTH, pattern = CursorCodec.ARGUMENT_PATTERN) String cursor) {
         GitLabGroup resolved = ResolvedResources.group(GitLabArguments.group(group));
         String fingerprint = CursorCodec.fingerprint("list_projects", resolved.fullPath());
-        int page = cursors.pageOf(cursor, "list_projects", fingerprint);
-        return cursors.result(gitlab.listProjects(resolved, page), "list_projects", fingerprint);
+        int start = cursors.pageOf(cursor, "list_projects", fingerprint);
+        PageFiller.Filled<ProjectSummary> filled = PageFiller.fill(Integer.toString(start), FILL_TO, FILL_READS,
+                position -> {
+                    pl.aiwcorpo.mcp.gitlab.core.domain.BackendPage<ProjectSummary> page =
+                            gitlab.listProjects(resolved, Integer.parseInt(position));
+                    return new PageFiller.BackendPage<>(page.items(),
+                            page.nextPage() == null ? null : Integer.toString(page.nextPage()));
+                },
+                listed -> resultFilter.retainAllowedById(ResolvedResources.PROJECT, listed, ProjectSummary::path));
+        return cursors.resultAt(filled.items(), filled.next(), "list_projects", fingerprint);
     }
 
     @Tool(name = "get_file", description = "Returns one UTF-8 text file from a GitLab repository at a branch, tag "

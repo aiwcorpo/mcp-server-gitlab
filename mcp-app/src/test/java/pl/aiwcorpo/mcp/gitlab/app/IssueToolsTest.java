@@ -34,7 +34,7 @@ class IssueToolsTest extends ServerTestSupport {
             JsonNode first = ok(client, "list_issues", Map.of("project", APP, "state", "opened", "search", "crash"));
 
             assertThat(first.path("items")).extracting(item -> item.path("iid").asInt()).containsExactly(1, 2);
-            assertThat(BACKEND.requests().getLast().rawQuery()).contains("state=opened", "search=crash", "per_page=30");
+            assertThat(BACKEND.requests().getLast().rawQuery()).contains("state=opened", "search=crash", "per_page=20");
             JsonNode second = ok(client, "list_issues", Map.of("project", APP, "state", "opened", "search", "crash",
                     "cursor", first.path("nextCursor").asString()));
             assertThat(second.path("items")).hasSize(1);
@@ -91,6 +91,11 @@ class IssueToolsTest extends ServerTestSupport {
             assertInvalidArgument(call(client, "create_issue", Map.of("project", APP, "title", "t", "description", "x\n/assign @me")),
                     "quick action");
             assertNotFoundOrDenied(call(client, "comment_issue", Map.of("project", APP, "iid", 99, "body", "x")));
+
+            McpSchema.CallToolResult unconfirmed = call(client, "create_issue", Map.of("project", APP, "title", "foreign-answer"));
+            assertThat(unconfirmed.isError()).isTrue();
+            assertThat(text(unconfirmed)).contains("\"error\":\"upstream_unavailable\"", "may have been saved")
+                    .doesNotContain("not_found_or_denied", "New issue");
         }
     }
 }

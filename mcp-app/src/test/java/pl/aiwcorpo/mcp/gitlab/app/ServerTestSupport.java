@@ -59,6 +59,7 @@ abstract class ServerTestSupport {
         registry.add("gitlab.backend.read-timeout", () -> "1s");
         registry.add("gitlab.backend.max-response-size", () -> "64KB");
         registry.add("gitlab.files.max-bytes", () -> "65536");
+        registry.add("gitlab.backend.max-json-size", () -> "64KB");
         registry.add("gitlab.backend.max-log-size", () -> "256KB");
     }
 

@@ -39,7 +39,6 @@ public interface MergeRequestPort {
 
     Optional<ApprovalResult> approve(long projectId, long iid, String expectedHeadSha);
 
-    /** {@code squash} and {@code removeSourceBranch} are sent only when given; GitLab then uses the settings of the merge request. */
-    Optional<MergeOutcome> merge(long projectId, long iid, String expectedHeadSha, @Nullable Boolean squash,
-            @Nullable Boolean removeSourceBranch);
+    /** {@code squash} is sent only when given; GitLab then uses the setting of the merge request. The source branch is never removed. */
+    Optional<MergeOutcome> merge(long projectId, long iid, String expectedHeadSha, @Nullable Boolean squash);
 }

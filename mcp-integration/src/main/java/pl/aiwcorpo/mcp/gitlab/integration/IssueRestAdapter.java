@@ -21,8 +21,8 @@ import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.NoteResponse;
 @Component
 public class IssueRestAdapter implements IssuePort {
 
-    static final int LIST_PAGE = 30;
-    static final int NOTE_PAGE = 20;
+    static final int LIST_PAGE = 20;
+    static final int NOTE_PAGE = 10;
 
     private static final ParameterizedTypeReference<List<IssueResponse>> ISSUES = new ParameterizedTypeReference<>() {
     };
@@ -74,7 +74,8 @@ public class IssueRestAdapter implements IssuePort {
         }
         return http.send(HttpMethod.POST, IssueResponse.class, body,
                         new GitLabQuery("/projects/{id}/issues").with("id", projectId), false)
-                .map(GitLabHttp::bodyOf).filter(issue -> issue.projectId() == projectId).map(IssueResponse::toChange);
+                .map(GitLabHttp::bodyOf).map(issue -> GitLabHttp.confirmed(issue, issue.projectId() == projectId))
+                .map(IssueResponse::toChange);
     }
 
     @Override
@@ -95,7 +96,8 @@ public class IssueRestAdapter implements IssuePort {
         }
         return http.send(HttpMethod.PUT, IssueResponse.class, body,
                         new GitLabQuery("/projects/{id}/issues/{iid}").with("id", projectId).with("iid", iid), false)
-                .map(GitLabHttp::bodyOf).filter(issue -> issue.projectId() == projectId).map(IssueResponse::toChange);
+                .map(GitLabHttp::bodyOf).map(issue -> GitLabHttp.confirmed(issue, issue.projectId() == projectId))
+                .map(IssueResponse::toChange);
     }
 
     @Override
@@ -103,7 +105,7 @@ public class IssueRestAdapter implements IssuePort {
         return http.send(HttpMethod.POST, NoteResponse.class, Map.of("body", body),
                         new GitLabQuery("/projects/{id}/issues/{iid}/notes").with("id", projectId).with("iid", iid), false)
                 .map(GitLabHttp::bodyOf)
-                .filter(note -> note.belongsTo(projectId, iid))
+                .map(note -> GitLabHttp.confirmed(note, note.belongsTo(projectId, iid)))
                 .map(note -> new IssueNote(null, iid, note.id(),
                         note.author() == null ? null : note.author().username(), note.createdAt()));
     }

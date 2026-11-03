@@ -2,6 +2,7 @@ package pl.aiwcorpo.mcp.gitlab.tools;
 
 import java.util.Optional;
 import org.springframework.stereotype.Component;
+import pl.aiwcorpo.mcp.gitlab.core.domain.BackendRateLimitedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.BackendRefusedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileNotReturnedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ResourceNotFoundException;
@@ -26,8 +27,17 @@ public class GitLabToolErrors implements ToolErrorMapping {
                 case REJECTED -> "GitLab refused the change: it is not valid in the current state of the project, for "
                         + "example a draft, a missing branch or an unresolved blocker.";
                 case LOG_TOO_LARGE -> "The job log is larger than the server reads; its end is not returned.";
+                case UNCONFIRMED -> "The change may have been saved, but GitLab's answer could not be confirmed for this "
+                        + "project. Check the current state before repeating it.";
             };
-            return Optional.of(new SafeError(ToolErrorCode.INVALID_ARGUMENT.code(), message));
+            String code = refused.reason() == BackendRefusedException.Reason.UNCONFIRMED
+                    ? ToolErrorCode.UPSTREAM_UNAVAILABLE.code() : ToolErrorCode.INVALID_ARGUMENT.code();
+            return Optional.of(new SafeError(code, message));
+        }
+        if (ex instanceof BackendRateLimitedException limited) {
+            return Optional.of(new SafeError(ToolErrorCode.RATE_LIMITED.code(),
+                    "GitLab is limiting requests; try again later.",
+                    java.util.Map.of("retryAfterSeconds", limited.retryAfterSeconds())));
         }
         if (ex instanceof FileNotReturnedException notReturned) {
             String message = switch (notReturned.reason()) {

@@ -35,7 +35,7 @@ public class IssueTools {
         this.cursors = cursors;
     }
 
-    @Tool(name = "list_issues", description = "Lists the issues of a project, most recently updated first, 30 per page: "
+    @Tool(name = "list_issues", description = "Lists the issues of a project, most recently updated first, 20 per page: "
             + "number, title, state, author, update time and web URL. Optionally limited by state, author, "
             + "assignee, labels (all of them) and a word in the title or description. Returns nextCursor when more "
             + "issues exist.")
@@ -82,7 +82,7 @@ public class IssueTools {
         return issues.get(ResolvedResources.project(GitLabArguments.project(project)), GitLabArguments.iid(iid));
     }
 
-    @Tool(name = "list_issue_notes", description = "Lists the comments of an issue in the order they were written, 20 per "
+    @Tool(name = "list_issue_notes", description = "Lists the comments of an issue in the order they were written, 10 per "
             + "page: id, author, text (cut at 4000 characters), whether it is a system note (GitLab's own log line) "
             + "and creation time. Returns truncated when a text was cut and nextCursor when more notes exist.")
     @ToolRisk(RiskLevel.READ_ONLY)

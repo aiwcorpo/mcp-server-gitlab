@@ -59,6 +59,8 @@ gitlab:
     connect-timeout: 2s
     read-timeout: 10s
     max-response-size: 1MB
+    # Lists and single objects come back with full descriptions and diffs; every text is cut to its own limit after reading.
+    max-json-size: ${MCP_GITLAB_MAX_JSON_SIZE:8MB}
     # GitLab cannot return only the end of a job log, so get_job_log reads the whole log (up to this size) to cut it.
     max-log-size: ${MCP_GITLAB_MAX_LOG_SIZE:8MB}
     # Plain http outside 'dev' only for the mocks of mcp-platform-dev; never in a real deployment.

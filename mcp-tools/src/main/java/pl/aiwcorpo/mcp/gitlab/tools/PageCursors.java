@@ -38,6 +38,12 @@ public class PageCursors {
         return Integer.parseInt(position.group(1));
     }
 
+    /** A page whose elements were filled and filtered by a {@code PageFiller}; {@code nextPage} is the position it ended at. */
+    <T> PagedResult<T> resultAt(java.util.List<T> items, @Nullable String nextPage, String tool, String fingerprint) {
+        String next = nextPage == null ? null : codec.issue(tool, fingerprint, "page:" + nextPage);
+        return new PagedResult<>(items, next, false, java.util.List.of());
+    }
+
     <T> PagedResult<T> result(BackendPage<T> page, String tool, String fingerprint) {
         return result(page, tool, fingerprint, item -> false);
     }

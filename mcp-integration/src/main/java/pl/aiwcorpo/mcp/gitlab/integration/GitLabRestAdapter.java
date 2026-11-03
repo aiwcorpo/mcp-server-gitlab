@@ -121,7 +121,7 @@ public class GitLabRestAdapter implements GitLabPort {
                         new GitLabQuery("/projects/{id}/merge_requests/{iid}/notes").with("id", projectId).with("iid", iid),
                         false)
                 .map(GitLabHttp::bodyOf)
-                .filter(note -> note.belongsTo(projectId, iid))
+                .map(note -> GitLabHttp.confirmed(note, note.belongsTo(projectId, iid)))
                 .map(note -> new MergeRequestNote(null, iid, note.id(),
                         note.author() == null ? null : note.author().username(), note.createdAt()));
     }

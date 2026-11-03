@@ -29,6 +29,5 @@ public interface MergeRequestUseCase {
 
     ApprovalResult approve(GitLabProject project, long iid, String expectedHeadSha);
 
-    MergeOutcome merge(GitLabProject project, long iid, String expectedHeadSha, @Nullable Boolean squash,
-            @Nullable Boolean removeSourceBranch);
+    MergeOutcome merge(GitLabProject project, long iid, String expectedHeadSha, @Nullable Boolean squash);
 }

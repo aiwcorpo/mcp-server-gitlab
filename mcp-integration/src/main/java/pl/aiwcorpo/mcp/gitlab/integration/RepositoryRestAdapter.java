@@ -22,7 +22,7 @@ import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.TreeEntryResponse;
 
 /**
  * Repository reads. Page sizes are chosen so that a full page of the largest rows still fits a result of 1 MiB: a diff
- * is cut at 16000 characters, so 20 of them are about 320 KB, a code snippet at 2000, so 20 of them about 40 KB.
+ * is cut at 16000 characters, so 10 of them are about 160 KB, a code snippet at 2000, so 20 of them about 40 KB.
  */
 @Component
 public class RepositoryRestAdapter implements RepositoryPort {
@@ -31,7 +31,7 @@ public class RepositoryRestAdapter implements RepositoryPort {
     static final int SEARCH_PAGE = 20;
     static final int BRANCH_PAGE = 50;
     static final int COMMIT_PAGE = 50;
-    static final int DIFF_PAGE = 20;
+    static final int DIFF_PAGE = 10;
 
     private static final ParameterizedTypeReference<List<TreeEntryResponse>> TREE = new ParameterizedTypeReference<>() {
     };
@@ -67,7 +67,8 @@ public class RepositoryRestAdapter implements RepositoryPort {
     public Optional<BackendPage<CodeHit>> searchCode(long projectId, String term, @Nullable String ref, int page) {
         return http.getPage(BLOBS, new GitLabQuery("/projects/{id}/search").with("id", projectId)
                         .fixed("scope", "blobs").param("search", term).param("ref", ref).page(page, SEARCH_PAGE))
-                .map(result -> result.map(BlobHitResponse::toDomain));
+                .map(result -> new BackendPage<>(result.items().stream().filter(hit -> hit.belongsTo(projectId))
+                        .map(BlobHitResponse::toDomain).toList(), result.nextPage()));
     }
 
     @Override

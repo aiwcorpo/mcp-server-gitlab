@@ -34,10 +34,13 @@ class ListProjectsToolTest extends ServerTestSupport {
                     .as("a project of another namespace").doesNotContain("finance/secret")
                     .as("fields outside the domain stay in the adapter").doesNotContain("runners_token", "GR1348941");
         }
-        assertThat(BACKEND.requests()).extracting(StubBackend.Seen::rawPath)
-                .containsExactly("/api/v4/groups/Team-A", "/api/v4/groups/7/projects");
+        assertThat(BACKEND.requests()).as("two projects of a page are hidden or foreign, so the page is filled from the next ones")
+                .extracting(StubBackend.Seen::rawPath)
+                .containsExactly("/api/v4/groups/Team-A", "/api/v4/groups/7/projects", "/api/v4/groups/7/projects",
+                        "/api/v4/groups/7/projects");
         assertThat(BACKEND.requests().get(1).rawQuery()).contains("with_shared=false", "include_subgroups=false",
-                "per_page=100");
+                "per_page=100", "page=1");
+        assertThat(BACKEND.requests().get(3).rawQuery()).contains("page=3");
         assertThat(BACKEND.credentials()).containsOnly("PRIVATE-TOKEN glpat-jkowalski-7f3a");
     }
 
@@ -49,7 +52,7 @@ class ListProjectsToolTest extends ServerTestSupport {
 
             McpSchema.CallToolResult second = call(client, "list_projects", Map.of("group", "team-a", "cursor", cursor));
             assertThat(second.isError()).isFalse();
-            assertThat(BACKEND.requests().getLast().rawQuery()).contains("page=2");
+            assertThat(BACKEND.requests().getLast().rawQuery()).as("the filler ended at page 3, the cursor continues at 4").contains("page=6");
 
             assertInvalidArgument(call(client, "list_projects", Map.of("group", "team-a/sub", "cursor", cursor)),
                     "The cursor is not valid");

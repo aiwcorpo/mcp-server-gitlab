@@ -33,6 +33,8 @@ public class GitLabCapabilities {
     static final int FIRST_MAJOR = 17;
     static final int LAST_TESTED_MAJOR = 19;
     private static final Duration REFRESH = Duration.ofHours(1);
+    /** A version endpoint that refused (token without the scope) is not asked again on every request. */
+    private static final Duration RETRY_AFTER_FAILURE = Duration.ofMinutes(5);
     private static final Logger LOG = LoggerFactory.getLogger(GitLabCapabilities.class);
 
     private record Learned(String version, long learnedAtMillis) {
@@ -40,6 +42,7 @@ public class GitLabCapabilities {
 
     private final GitLabHttp http;
     private final AtomicReference<Learned> learned = new AtomicReference<>();
+    private volatile long failedAtMillis;
 
     public GitLabCapabilities(GitLabHttp http) {
         this.http = http;
@@ -48,17 +51,23 @@ public class GitLabCapabilities {
     /** Asks GitLab for its version with the current user's credential when it is not known or stale; never fails the caller. */
     void learn() {
         Learned known = learned.get();
-        if (known != null && System.currentTimeMillis() - known.learnedAtMillis() < REFRESH.toMillis()) {
+        long now = System.currentTimeMillis();
+        if (known != null && now - known.learnedAtMillis() < REFRESH.toMillis()
+                || now - failedAtMillis < RETRY_AFTER_FAILURE.toMillis()) {
             return;
         }
         try {
-            http.version().map(GitLabHttp.VersionResponse::version).ifPresent(version -> {
-                if (known == null || !known.version().equals(version)) {
-                    LOG.info("event=backend_version version={}", sanitized(version));
-                }
-                learned.set(new Learned(version, System.currentTimeMillis()));
-            });
+            java.util.Optional<String> version = http.version().map(GitLabHttp.VersionResponse::version);
+            if (version.isEmpty()) {
+                failedAtMillis = now;
+                return;
+            }
+            if (known == null || !known.version().equals(version.get())) {
+                LOG.info("event=backend_version version={}", sanitized(version.get()));
+            }
+            learned.set(new Learned(version.get(), now));
         } catch (RuntimeException unknown) {
+            failedAtMillis = now;
             // The request that follows reports a credential problem itself; here a failure only means "not known".
             LOG.debug("event=backend_version_unavailable reason={}", unknown.getClass().getSimpleName());
         }
@@ -67,6 +76,7 @@ public class GitLabCapabilities {
     /** Drops the learned version, so that the next request learns it again (a version that changed, a test). */
     public void forget() {
         learned.set(null);
+        failedAtMillis = 0;
     }
 
     /** The state for the platform's health and metric; reads what was learned and calls nothing. */

@@ -14,8 +14,16 @@ per wersja to filtr szkiców (`draft`, `wip`, lokalnie); pola przemianowane czyt
 Przynależność: każdy identyfikator pod projektem adresowany ścieżką `/projects/:id/...` i potwierdzany odpowiedzią (`project_id`,
 `pipeline.project_id`, `noteable_iid`); log zadania czytany po potwierdzeniu zadania; ścieżka pliku porównana z nagłówkiem.
 
-Testy: 127 (mcp-app 110, mcp-tools 10, mcp-application 7). Atrapa `StubBackend` z fixtures `gitlab-17.8`, `gitlab-19.5`,
+Testy: 187 (mcp-app 161, mcp-tools 10, mcp-application 16 w tym `JobLogTextTest` z logiem o rozmiarze limitu). Atrapa `StubBackend` z fixtures `gitlab-17.8`, `gitlab-19.5`,
 `gitlab-legacy` (16.11) i `common`, pisanymi ręcznie z dokumentacji, nie nagranymi.
+
+Poprawki po przeglądzie: maskowanie logu w czasie liniowym (okno 400000 znaków, ograniczone kwantyfikatory, bez lookbehindu; test na logach
+o rozmiarze limitu z progiem czasu) i więcej kształtów sekretów; `merge_merge_request` bez `removeSourceBranch` (zawsze
+`should_remove_source_branch=false`); `approve` rozpoznaje powtórzenie; osobny limit JSON (`MCP_GITLAB_MAX_JSON_SIZE`) i mniejsze strony;
+test `OutOfReachTest` po wszystkich 30 narzędziach; `PageFiller` w `list_projects`; przynależność notatek i trafień wyszukiwania
+wymagana (fail-closed); zapis z odpowiedzią spoza projektu to `upstream_unavailable` ze stałym tekstem; `429` to `rate_limited`;
+nieudane `GET /version` nie jest ponawiane przez 5 minut; fałszywe sekrety w logach testowych składane z części, logi generowane w
+teście; domyślny prefiks obrazu `m6`, `CI_APP_MIN_TESTS` 100.
 
 Nie sprawdzone: działający GitLab (CE ani klienta), kształty odpowiedzi 19.x poza dokumentacją, kod odpowiedzi `approve` przy
 niezgodnym `sha` (atrapa: 409), dokładna reguła `401` przy `approve` i `merge` (obsłużona sprawdzeniem `GET /user`), widoczność

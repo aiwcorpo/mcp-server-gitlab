@@ -156,7 +156,7 @@ public class RepositoryTools {
         return repository.commit(ResolvedResources.project(GitLabArguments.project(project)), GitLabArguments.commit(sha));
     }
 
-    @Tool(name = "get_commit_diff", description = "Returns the changes of one commit, 20 files per page: old and new "
+    @Tool(name = "get_commit_diff", description = "Returns the changes of one commit, 10 files per page: old and new "
             + "path, whether the file was added, renamed or deleted, and the diff text, cut at 16000 characters per "
             + "file. Returns truncated when a diff was cut and nextCursor when more files exist.")
     @ToolRisk(RiskLevel.READ_ONLY)

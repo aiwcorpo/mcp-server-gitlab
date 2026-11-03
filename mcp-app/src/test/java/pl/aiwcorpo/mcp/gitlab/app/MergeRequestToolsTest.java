@@ -64,7 +64,7 @@ class MergeRequestToolsTest extends ServerTestSupport {
             assertThat(second.path("items")).hasSize(1);
             assertThat(second.path("nextCursor").isNull()).isTrue();
         }
-        assertThat(listQuery()).contains("order_by=updated_at", "per_page=30");
+        assertThat(listQuery()).contains("order_by=updated_at", "per_page=20");
     }
 
     @Test
@@ -139,6 +139,17 @@ class MergeRequestToolsTest extends ServerTestSupport {
             assertCredentialRequired(call(anonymous, "get_project", Map.of("project", APP)));
         }
         assertThat(BACKEND.versionRequests()).as("no credential, no call").hasSize(1);
+    }
+
+    @Test
+    void aPageWithLongDescriptionsIsReadAboveTheSizeOfAFileAndNotRefused() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            JsonNode page = ok(client, "list_merge_requests", Map.of("project", APP, "labels", List.of("big")));
+
+            assertThat(page.path("items")).extracting(item -> item.path("iid").asInt()).containsExactly(101, 102);
+            assertThat(text(call(client, "list_merge_requests", Map.of("project", APP, "labels", List.of("big")))))
+                    .as("the listing leaves the descriptions out").doesNotContain("word word");
+        }
     }
 
     @Test
@@ -234,6 +245,18 @@ class MergeRequestToolsTest extends ServerTestSupport {
     }
 
     @Test
+    void aRepeatedApprovalByTheSameUserIsReportedAsApproved() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            JsonNode again = ok(client, "approve_merge_request", Map.of("project", APP, "iid", 6, "expectedHeadSha", "6".repeat(40)));
+            assertThat(again.path("approvals").asInt()).isEqualTo(2);
+            assertThat(again.path("headSha").asString()).isEqualTo("6".repeat(40));
+
+            assertNotFoundOrDenied(call(client, "approve_merge_request",
+                    Map.of("project", APP, "iid", 6, "expectedHeadSha", "5".repeat(40))));
+        }
+    }
+
+    @Test
     void anApprovalGitLabAnswersWith401IsADenialWhenTheTokenStillWorksAndAReconnectWhenItDoesNot() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             assertNotFoundOrDenied(call(client, "approve_merge_request",
@@ -257,7 +280,7 @@ class MergeRequestToolsTest extends ServerTestSupport {
             StubBackend.Seen sent = BACKEND.requests().getLast();
             assertThat(sent.method()).isEqualTo("PUT");
             assertThat(sent.body()).contains("\"sha\":\"" + StubBackend.HEAD_SHA + "\"", "\"squash\":true")
-                    .doesNotContain("should_remove_source_branch");
+                    .as("a merge through the server never deletes a branch").contains("\"should_remove_source_branch\":false");
 
             assertInvalidArgument(call(client, "merge_merge_request",
                     Map.of("project", APP, "iid", 1, "expectedHeadSha", "9".repeat(40))), "conflicts with the current state");
@@ -273,6 +296,19 @@ class MergeRequestToolsTest extends ServerTestSupport {
                     "not valid in the current state");
             assertNotFoundOrDenied(call(client, "merge_merge_request",
                     Map.of("project", APP, "iid", 99, "expectedHeadSha", StubBackend.HEAD_SHA)));
+        }
+    }
+
+    @Test
+    void aRateLimitOfGitLabIsReportedWithTheWaitItAskedFor() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            McpSchema.CallToolResult result = call(client, "get_merge_request", Map.of("project", APP, "iid", 10));
+
+            assertThat(result.isError()).isTrue();
+            JsonNode error = JSON.readTree(text(result));
+            assertThat(error.path("error").asString()).isEqualTo("rate_limited");
+            assertThat(error.path("retryAfterSeconds").asInt()).isEqualTo(17);
+            assertThat(text(result)).doesNotContain("Retry later");
         }
     }
 
