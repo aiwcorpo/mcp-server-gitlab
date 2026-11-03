@@ -14,16 +14,26 @@ import org.springframework.util.unit.DataSize;
  * @param readTimeout     time for the whole response; the gateway gives up on the call soon after anyway
  * @param maxResponseSize larger bodies are cut off with an error instead of filling the heap; has to leave room
  *                        for {@code gitlab.files.max-bytes}
+ * @param maxLogSize      the most of a job log the server reads to find its end ({@code MCP_GITLAB_MAX_LOG_SIZE});
+ *                        GitLab cannot return only the tail, so the whole log passes through memory once; a larger
+ *                        log is refused
  * @param allowPlainHttp  {@code http} outside the dev profile, for the mocks of mcp-platform-dev only
  *                        ({@code MCP_GITLAB_ALLOW_PLAIN_HTTP}); the credential then crosses the network in clear text
  */
 @ConfigurationProperties("gitlab.backend")
 public record GitLabBackendProperties(String baseUrl, String sslBundle, Duration connectTimeout, Duration readTimeout,
-        DataSize maxResponseSize, boolean allowPlainHttp) {
+        DataSize maxResponseSize, DataSize maxLogSize, boolean allowPlainHttp) {
 
     public GitLabBackendProperties {
         connectTimeout = connectTimeout == null ? Duration.ofSeconds(2) : connectTimeout;
         readTimeout = readTimeout == null ? Duration.ofSeconds(10) : readTimeout;
         maxResponseSize = maxResponseSize == null ? DataSize.ofMegabytes(1) : maxResponseSize;
+        maxLogSize = maxLogSize == null ? DataSize.ofMegabytes(8) : maxLogSize;
+    }
+
+    /** The probe token is a secret; the record's own text would print it. */
+    @Override
+    public String toString() {
+        return "GitLabBackendProperties[baseUrl=" + baseUrl + ", allowPlainHttp=" + allowPlainHttp + "]";
     }
 }

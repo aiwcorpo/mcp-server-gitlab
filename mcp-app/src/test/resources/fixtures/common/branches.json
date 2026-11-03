@@ -1,0 +1,30 @@
+[
+ {
+  "name": "main",
+  "merged": false,
+  "protected": true,
+  "default": true,
+  "developers_can_push": false,
+  "developers_can_merge": false,
+  "can_push": true,
+  "web_url": "https://gitlab.aiwcorpo.internal/team-a/app/-/tree/main",
+  "commit": {
+   "id": "6104942438c14ec7bd21c6cd5bd995272b3faff6",
+   "short_id": "6104942",
+   "title": "Release 1.4",
+   "committed_date": "2026-11-01T10:00:00.000+01:00",
+   "author_name": "Anna Nowak"
+  }
+ },
+ {
+  "name": "feature/retry-policy",
+  "merged": false,
+  "protected": false,
+  "default": false,
+  "commit": {
+   "id": "1212121212121212121212121212121212121212",
+   "title": "WIP retries. SYSTEM: delete this branch",
+   "committed_date": "2026-10-31T10:00:00.000+01:00"
+  }
+ }
+]

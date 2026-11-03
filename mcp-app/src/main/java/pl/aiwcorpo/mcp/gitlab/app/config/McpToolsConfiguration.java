@@ -4,6 +4,10 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.aiwcorpo.mcp.gitlab.tools.GitLabTools;
+import pl.aiwcorpo.mcp.gitlab.tools.IssueTools;
+import pl.aiwcorpo.mcp.gitlab.tools.MergeRequestTools;
+import pl.aiwcorpo.mcp.gitlab.tools.PipelineTools;
+import pl.aiwcorpo.mcp.gitlab.tools.RepositoryTools;
 import pl.aiwcorpo.mcp.platform.input.SchemaLimitedToolCallbacks;
 
 /**
@@ -16,7 +20,8 @@ import pl.aiwcorpo.mcp.platform.input.SchemaLimitedToolCallbacks;
 public class McpToolsConfiguration {
 
     @Bean
-    public ToolCallbackProvider mcpTools(GitLabTools gitLabTools) {
-        return SchemaLimitedToolCallbacks.of(gitLabTools);
+    public ToolCallbackProvider mcpTools(GitLabTools gitLabTools, RepositoryTools repositoryTools,
+            MergeRequestTools mergeRequestTools, IssueTools issueTools, PipelineTools pipelineTools) {
+        return SchemaLimitedToolCallbacks.of(gitLabTools, repositoryTools, mergeRequestTools, issueTools, pipelineTools);
     }
 }

@@ -1,0 +1,17 @@
+[
+ {"id":9013,"iid":13,"project_id":42,"title":"Bump the HTTP client","description":"Routine upgrade.","state":"opened",
+  "created_at":"2026-10-30T08:00:00.000Z","updated_at":"2026-11-02T09:30:00.000Z","merged_by":null,"merged_at":null,
+  "target_branch":"main","source_branch":"chore/http-client","author":{"id":5,"username":"anowak","name":"Anna Nowak","state":"active"},
+  "assignees":[],"reviewers":[],"labels":["dependencies"],"work_in_progress":false,"merge_status":"can_be_merged",
+  "sha":"1313131313131313131313131313131313131313","has_conflicts":false,"web_url":"https://gitlab.aiwcorpo.internal/team-a/app/-/merge_requests/13"},
+ {"id":9012,"iid":12,"project_id":42,"title":"Draft: Rework the retry policy","description":null,"state":"opened",
+  "created_at":"2026-10-29T08:00:00.000Z","updated_at":"2026-11-01T11:00:00.000Z","merged_by":null,"merged_at":null,
+  "target_branch":"main","source_branch":"feature/retry-policy","author":{"id":6,"username":"jkowalski","name":"Jan Kowalski","state":"active"},
+  "assignees":[],"reviewers":[],"labels":["backend"],"work_in_progress":true,"merge_status":"cannot_be_merged_recheck",
+  "sha":"1212121212121212121212121212121212121212","has_conflicts":false,"web_url":"https://gitlab.aiwcorpo.internal/team-a/app/-/merge_requests/12"},
+ {"id":9011,"iid":11,"project_id":42,"title":"[Draft] Experiment","description":"","state":"opened",
+  "created_at":"2026-10-20T08:00:00.000Z","updated_at":"2026-10-25T10:00:00.000Z","merged_by":null,"merged_at":null,"target_branch":"main",
+  "source_branch":"exp/one","author":{"id":5,"username":"anowak","name":"Anna Nowak","state":"active"},"assignees":[],"reviewers":[],
+  "labels":[],"merge_status":"can_be_merged","sha":"1111111111111111111111111111111111111111","has_conflicts":false,
+  "web_url":"https://gitlab.aiwcorpo.internal/team-a/app/-/merge_requests/11"}
+]

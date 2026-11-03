@@ -43,8 +43,8 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
     }
 
     /**
-     * The elements of a listing come from one group, so GitLab is asked for that group's project page once (the page
-     * the listing itself read is kept for the call) instead of once per project. A project the page does not hold, such
+     * The elements of a listing come from one group, so the page the listing itself read (kept for the call) is used
+     * instead of asking GitLab once per project. A project the page does not hold, such
      * as one under another path, is looked up on its own.
      */
     @Override
@@ -53,7 +53,7 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
         for (String parent : paths.stream().map(AncestorTopics::parentPath).distinct().toList()) {
             Optional<GitLabGroup> group = gitlab.findGroup(parent);
             if (group.isPresent()) {
-                ProjectPage page = gitlab.listGroupProjects(group.get().id(), GitLabPort.PAGE_SIZE);
+                ProjectPage page = gitlab.listedGroupProjects(group.get().id(), GitLabPort.PAGE_SIZE);
                 for (int i = 0; i < page.resources().size(); i++) {
                     if (page.namespaceIds().get(i) == group.get().id()) {
                         GitLabProject project = page.resources().get(i);

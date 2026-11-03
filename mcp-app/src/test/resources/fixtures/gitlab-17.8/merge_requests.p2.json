@@ -1,0 +1,7 @@
+[
+ {"id":9010,"iid":10,"project_id":42,"title":"Older change","description":"","state":"closed","created_at":"2026-09-01T08:00:00.000Z",
+  "updated_at":"2026-09-02T08:00:00.000Z","merged_by":null,"merge_user":null,"merged_at":null,"target_branch":"main","source_branch":"old/change",
+  "author":{"id":5,"username":"anowak","name":"Anna Nowak","state":"active"},"assignees":[],"reviewers":[],"labels":[],"draft":false,
+  "work_in_progress":false,"merge_status":"can_be_merged","detailed_merge_status":"not_open","sha":"1010101010101010101010101010101010101010",
+  "has_conflicts":false,"web_url":"https://gitlab.aiwcorpo.internal/team-a/app/-/merge_requests/10"}
+]

@@ -35,34 +35,37 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
     }
 
     @Test
-    void publishesExactlyTheFourToolsWithStrictSchemasAndRiskHints() {
+    void publishesExactlyTheReviewedToolsWithStrictSchemasAndRiskHints() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             List<McpSchema.Tool> tools = client.listTools().tools();
 
             assertThat(tools).extracting(McpSchema.Tool::name)
-                    .containsExactlyInAnyOrder("list_projects", "get_file", "get_merge_request", "comment_merge_request");
+                    .containsExactlyInAnyOrderElementsOf(ToolCatalog.TOOLS.keySet());
             for (McpSchema.Tool tool : tools) {
                 JsonNode schema = JsonMapper.builder().build().valueToTree(tool.inputSchema());
                 assertThat(schema.path("additionalProperties").asBoolean(true)).as(tool.name()).isFalse();
                 schema.path("properties").properties().forEach(property -> {
                     JsonNode limits = property.getValue();
-                    assertThat(limits.has("maxLength") || limits.has("maximum"))
+                    assertThat(limits.has("maxLength") || limits.has("maximum") || limits.has("maxItems")
+                            || "boolean".equals(limits.path("type").asString()))
                             .as(tool.name() + "." + property.getKey() + " has a limit").isTrue();
                 });
                 assertThat(tool.description().toLowerCase())
                         .as("descriptions say what the tool does, not what the model should do")
                         .doesNotContain("always", "you must", "you should", "first call", "ignore");
             }
-            McpSchema.Tool comment = byName(tools, "comment_merge_request");
-            assertThat(comment.annotations().readOnlyHint()).isFalse();
-            assertThat(comment.annotations().destructiveHint()).isFalse();
-            assertThat(JsonMapper.builder().build().valueToTree(comment.inputSchema()).at("/properties/body/maxLength").asInt())
+            for (McpSchema.Tool tool : tools) {
+                boolean readOnly = ToolCatalog.TOOLS.get(tool.name()).risk().equals("READ_ONLY");
+                assertThat(tool.annotations().readOnlyHint()).as(tool.name()).isEqualTo(readOnly);
+                assertThat(tool.annotations().destructiveHint()).as(tool.name()).isFalse();
+            }
+            assertThat(tools).as("no tool takes a raw API path, a query language or a variable set")
+                    .extracting(McpSchema.Tool::name).noneMatch(name -> name.contains("graphql") || name.contains("api_call")
+                            || name.contains("raw") || name.contains("play_job") || name.startsWith("delete_"));
+            assertThat(JsonMapper.builder().build().valueToTree(byName(tools, "comment_merge_request").inputSchema()).at("/properties/body/maxLength").asInt())
                     .isEqualTo(10_000);
             assertThat(JsonMapper.builder().build().valueToTree(byName(tools, "get_file").inputSchema()).path("required"))
                     .extracting(JsonNode::asString).containsExactlyInAnyOrder("project", "path");
-            for (String readOnly : List.of("list_projects", "get_file", "get_merge_request")) {
-                assertThat(byName(tools, readOnly).annotations().readOnlyHint()).as(readOnly).isTrue();
-            }
         }
     }
 
@@ -91,7 +94,7 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
 
             assertThat(json.valueToTree(byName(tools, "list_projects").inputSchema()).at("/properties/group/pattern").asString())
                     .isEqualTo(defs.path("GitLabGroupPath").path("pattern").asString());
-            for (String tool : List.of("get_file", "get_merge_request", "comment_merge_request")) {
+            for (String tool : ToolCatalog.TOOLS.keySet().stream().filter(name -> !name.equals("list_projects")).toList()) {
                 assertThat(json.valueToTree(byName(tools, tool).inputSchema()).at("/properties/project/pattern").asString())
                         .as(tool).isEqualTo(defs.path("GitLabProjectPath").path("pattern").asString());
             }

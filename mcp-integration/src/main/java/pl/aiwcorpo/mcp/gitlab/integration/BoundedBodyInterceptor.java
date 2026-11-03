@@ -81,7 +81,7 @@ final class BoundedBodyInterceptor implements ClientHttpRequestInterceptor {
         private void count(int n) throws IOException {
             remaining -= n;
             if (remaining < 0) {
-                throw new IOException("backend response larger than the configured limit");
+                throw new ResponseTooLargeException();
             }
         }
     }

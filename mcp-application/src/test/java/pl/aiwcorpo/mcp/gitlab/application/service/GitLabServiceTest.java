@@ -34,11 +34,10 @@ class GitLabServiceTest {
 
     @Test
     void listsOnlyProjectsWhoseNamespaceIsTheResolvedGroup() {
-        var list = service.listProjects(TEAM_A);
+        var list = service.listProjects(TEAM_A, 1);
 
-        assertThat(list.group()).as("canonical path from GitLab, not the argument").isEqualTo("team-a");
-        assertThat(list.projects()).extracting(ProjectSummary::path).containsExactly("team-a/app");
-        assertThat(list.truncated()).isTrue();
+        assertThat(list.items()).extracting(ProjectSummary::path).containsExactly("team-a/app");
+        assertThat(list.nextPage()).as("GitLab announced a second page").isEqualTo(2);
     }
 
     @Test
@@ -105,9 +104,14 @@ class GitLabServiceTest {
         }
 
         @Override
-        public ProjectPage listGroupProjects(long groupId, int pageSize) {
+        public ProjectPage listGroupProjects(long groupId, int pageSize, int page) {
             return new ProjectPage(List.of(summary("team-a/app"), summary("other/shared")),
-                    List.of(APP, new GitLabProject(90, "other/shared", "main", List.of())), List.of(GROUP_ID, 99L), true);
+                    List.of(APP, new GitLabProject(90, "other/shared", "main", List.of())), List.of(GROUP_ID, 99L), 2);
+        }
+
+        @Override
+        public ProjectPage listedGroupProjects(long groupId, int pageSize) {
+            return listGroupProjects(groupId, pageSize, 1);
         }
 
         @Override
@@ -134,7 +138,7 @@ class GitLabServiceTest {
         public Optional<FoundMergeRequest> findMergeRequest(long projectId, long iid) {
             long owner = iid == 1 ? PROJECT_ID : 1000;
             return Optional.of(new FoundMergeRequest(owner, new MergeRequest(null, iid, null, null, "opened", false, null, null, null,
-                    List.of(), List.of(), List.of(), null, null, null, null, false, null)));
+                    List.of(), List.of(), List.of(), null, null, null, null, false, null, null, null)));
         }
 
         @Override

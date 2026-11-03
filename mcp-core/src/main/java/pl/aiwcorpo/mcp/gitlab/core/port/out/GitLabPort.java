@@ -21,9 +21,18 @@ public interface GitLabPort {
 
     Optional<GitLabProject> findProject(String pathWithNamespace);
 
-    /** First page of projects directly in the group, ordered by path; shared projects are not included. Answers for the
-     * same group and size within one tool call are the same page. */
-    ProjectPage listGroupProjects(long groupId, int pageSize);
+    /**
+     * One page (from 1) of projects directly in the group, ordered by path; shared projects are not included. Answers
+     * for the same group, size and page within one tool call are the same page.
+     */
+    ProjectPage listGroupProjects(long groupId, int pageSize, int page);
+
+    /**
+     * The page of the group's projects that the current tool call listed last, or the first page when it listed none.
+     * The starter resolves every listed project after the tool returned, and this is where those projects are, however
+     * far into the listing the caller is.
+     */
+    ProjectPage listedGroupProjects(long groupId, int pageSize);
 
     Optional<FileMetadata> fileMetadata(long projectId, String filePath, String ref);
 

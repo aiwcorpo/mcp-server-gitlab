@@ -25,8 +25,7 @@ class ListProjectsToolTest extends ServerTestSupport {
 
             assertThat(result.isError()).isFalse();
             assertThat(text(result))
-                    .as("canonical path from GitLab, not the argument").contains("\"group\":\"team-a\"")
-                    .contains("\"path\":\"team-a/app\"", "\"path\":\"team-a/lib\"", "\"truncated\":true",
+                    .contains("\"path\":\"team-a/app\"", "\"path\":\"team-a/lib\"", "\"nextCursor\":\"",
                             "\"format\":\"text/markdown\"")
                     .as("the name and the default branch are data too")
                     .contains("{\"kind\":\"untrusted-data\",\"format\":\"text/plain\","
@@ -40,6 +39,21 @@ class ListProjectsToolTest extends ServerTestSupport {
         assertThat(BACKEND.requests().get(1).rawQuery()).contains("with_shared=false", "include_subgroups=false",
                 "per_page=100");
         assertThat(BACKEND.credentials()).containsOnly("PRIVATE-TOKEN glpat-jkowalski-7f3a");
+    }
+
+    @Test
+    void theCursorOfTheFirstPageOpensTheSecondOnlyForTheSameListing() throws Exception {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            String cursor = tools.jackson.databind.json.JsonMapper.builder().build()
+                    .readTree(text(call(client, "list_projects", Map.of("group", "team-a")))).path("nextCursor").asString();
+
+            McpSchema.CallToolResult second = call(client, "list_projects", Map.of("group", "team-a", "cursor", cursor));
+            assertThat(second.isError()).isFalse();
+            assertThat(BACKEND.requests().getLast().rawQuery()).contains("page=2");
+
+            assertInvalidArgument(call(client, "list_projects", Map.of("group", "team-a/sub", "cursor", cursor)),
+                    "The cursor is not valid");
+        }
     }
 
     @Test

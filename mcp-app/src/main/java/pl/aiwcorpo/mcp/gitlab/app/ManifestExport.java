@@ -19,6 +19,10 @@ import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
 import pl.aiwcorpo.mcp.gitlab.app.config.McpToolsConfiguration;
 import pl.aiwcorpo.mcp.gitlab.tools.GitLabTools;
+import pl.aiwcorpo.mcp.gitlab.tools.IssueTools;
+import pl.aiwcorpo.mcp.gitlab.tools.MergeRequestTools;
+import pl.aiwcorpo.mcp.gitlab.tools.PipelineTools;
+import pl.aiwcorpo.mcp.gitlab.tools.RepositoryTools;
 import pl.aiwcorpo.mcp.platform.autoconfigure.McpPlatformProperties;
 import pl.aiwcorpo.mcp.platform.guard.ToolHintsPostProcessor;
 import pl.aiwcorpo.mcp.platform.guard.ToolRiskRegistry;
@@ -66,7 +70,8 @@ public final class ManifestExport {
 
         ToolRiskRegistry registry = new ToolRiskRegistry(ToolRiskRegistry.Unclassified.FAIL);
         List<McpServerFeatures.SyncToolSpecification> specifications = new ArrayList<>();
-        for (ToolCallback callback : new McpToolsConfiguration().mcpTools(new GitLabTools(null)).getToolCallbacks()) {
+        for (ToolCallback callback : new McpToolsConfiguration().mcpTools(new GitLabTools(null, null), new RepositoryTools(null, null),
+                new MergeRequestTools(null, null, null), new IssueTools(null, null), new PipelineTools(null, null)).getToolCallbacks()) {
             registry.register(callback);
             specifications.add(McpToolUtils.toSyncToolSpecification(callback));
         }

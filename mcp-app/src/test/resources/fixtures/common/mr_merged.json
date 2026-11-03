@@ -1,0 +1,11 @@
+{
+ "id": 9001,
+ "iid": 1,
+ "project_id": 42,
+ "title": "Add retry",
+ "state": "merged",
+ "merge_commit_sha": "9999999999999999999999999999999999999999",
+ "merged_at": "2026-11-03T08:00:00.000Z",
+ "sha": "8888888888888888888888888888888888888888",
+ "web_url": "https://gitlab.aiwcorpo.internal/team-a/app/-/merge_requests/1"
+}

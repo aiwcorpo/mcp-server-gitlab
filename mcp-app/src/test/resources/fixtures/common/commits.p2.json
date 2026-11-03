@@ -1,0 +1,10 @@
+[
+ {
+  "id": "5555555555555555555555555555555555555555",
+  "title": "Older commit",
+  "message": "Older commit\n",
+  "author_name": "Jan Kowalski",
+  "authored_date": "2026-10-01T10:00:00.000+01:00",
+  "web_url": "https://gitlab.aiwcorpo.internal/team-a/app/-/commit/5555555555555555555555555555555555555555"
+ }
+]

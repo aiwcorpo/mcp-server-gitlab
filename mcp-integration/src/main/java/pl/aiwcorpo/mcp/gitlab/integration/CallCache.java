@@ -18,6 +18,22 @@ final class CallCache {
 
     private final Map<ResourceContext, Map<String, Object>> entries = Collections.synchronizedMap(new WeakHashMap<>());
 
+    /** Keeps a value for the rest of the call; outside a call nothing is kept. */
+    void put(String key, Object value) {
+        ResourceContext call = ResourceContext.current().orElse(null);
+        if (call != null) {
+            entries.computeIfAbsent(call, ignored -> Collections.synchronizedMap(new HashMap<>())).put(key, value);
+        }
+    }
+
+    /** What the current call kept under {@code key}, {@code null} when nothing. */
+    @SuppressWarnings("unchecked")
+    <T> T peek(String key) {
+        ResourceContext call = ResourceContext.current().orElse(null);
+        Map<String, Object> forCall = call == null ? null : entries.get(call);
+        return forCall == null ? null : (T) forCall.get(key);
+    }
+
     @SuppressWarnings("unchecked")
     <T> T get(String key, Supplier<T> load) {
         ResourceContext call = ResourceContext.current().orElse(null);

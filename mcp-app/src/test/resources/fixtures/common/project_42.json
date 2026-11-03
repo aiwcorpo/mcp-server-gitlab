@@ -1,0 +1,20 @@
+{
+ "id": 42,
+ "description": "Main application",
+ "name": "App",
+ "path": "app",
+ "path_with_namespace": "team-a/app",
+ "default_branch": "main",
+ "archived": false,
+ "visibility": "internal",
+ "last_activity_at": "2026-11-02T09:30:00.000Z",
+ "web_url": "https://gitlab.aiwcorpo.internal/team-a/app",
+ "namespace": {
+  "id": 7,
+  "full_path": "team-a"
+ },
+ "topics": [
+  "backend"
+ ],
+ "runners_token": "GR1348941-not-for-the-model"
+}

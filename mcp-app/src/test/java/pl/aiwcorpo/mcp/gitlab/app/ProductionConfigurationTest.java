@@ -15,7 +15,7 @@ import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.env.MockEnvironment;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabBackendProperties;
-import pl.aiwcorpo.mcp.gitlab.integration.GitLabRestAdapter;
+import pl.aiwcorpo.mcp.gitlab.integration.GitLabHttp;
 
 /** What the production configuration must keep, checked without starting a server. */
 class ProductionConfigurationTest {
@@ -80,8 +80,8 @@ class ProductionConfigurationTest {
                 .hasMessageContaining("https");
         assertThatCode(() -> adapter("https://backend.internal", new MockEnvironment())).doesNotThrowAnyException();
 
-        assertThatCode(() -> new GitLabRestAdapter(
-                new GitLabBackendProperties("http://gitlab.internal:8080", null, null, null, null, true),
+        assertThatCode(() -> new GitLabHttp(
+                new GitLabBackendProperties("http://gitlab.internal:8080", null, null, null, null, null, true),
                 new DefaultListableBeanFactory().getBeanProvider(SslBundles.class), new MockEnvironment()))
                 .as("explicit opt-in for the dev environment's mocks").doesNotThrowAnyException();
 
@@ -97,8 +97,8 @@ class ProductionConfigurationTest {
         assertThat(String.valueOf(dev.get("server.address"))).isEqualTo("127.0.0.1");
     }
 
-    private static GitLabRestAdapter adapter(String baseUrl, MockEnvironment environment) {
-        return new GitLabRestAdapter(new GitLabBackendProperties(baseUrl, null, null, null, null, false),
+    private static GitLabHttp adapter(String baseUrl, MockEnvironment environment) {
+        return new GitLabHttp(new GitLabBackendProperties(baseUrl, null, null, null, null, null, false),
                 new DefaultListableBeanFactory().getBeanProvider(SslBundles.class), environment);
     }
 }

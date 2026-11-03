@@ -1,0 +1,14 @@
+{
+ "id": 9007,
+ "iid": 7,
+ "project_id": 42,
+ "title": "Done",
+ "state": "merged",
+ "draft": false,
+ "merged_at": "2026-11-03T07:00:00.000Z",
+ "sha": "7777777777777777777777777777777777777777",
+ "merge_user": {
+  "id": 6,
+  "username": "jkowalski"
+ }
+}

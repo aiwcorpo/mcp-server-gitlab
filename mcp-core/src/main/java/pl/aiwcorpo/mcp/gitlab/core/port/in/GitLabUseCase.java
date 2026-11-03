@@ -1,10 +1,11 @@
 package pl.aiwcorpo.mcp.gitlab.core.port.in;
 
+import pl.aiwcorpo.mcp.gitlab.core.domain.BackendPage;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequest;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequestNote;
-import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectList;
+import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectSummary;
 import pl.aiwcorpo.mcp.gitlab.core.domain.RepositoryFile;
 
 /**
@@ -15,7 +16,8 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.RepositoryFile;
  */
 public interface GitLabUseCase {
 
-    ProjectList listProjects(GitLabGroup group);
+    /** One page (from 1) of the projects directly in the group. */
+    BackendPage<ProjectSummary> listProjects(GitLabGroup group, int page);
 
     /** @param ref branch, tag or commit; {@code null} for the default branch */
     RepositoryFile getFile(GitLabProject project, String filePath, String ref);

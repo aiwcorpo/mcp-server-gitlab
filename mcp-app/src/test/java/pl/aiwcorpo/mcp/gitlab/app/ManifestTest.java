@@ -102,7 +102,7 @@ class ManifestTest extends ServerTestSupport {
         assertThat(exported.at("/credential/acceptedTypes")).extracting(JsonNode::asString)
                 .containsExactly("user-oauth", "user-secret");
         assertThat(ManifestRules.violations(exported.toString())).isEmpty();
-        assertThat(exported.get("tools")).hasSize(4);
+        assertThat(exported.get("tools")).hasSize(ToolCatalog.TOOLS.size());
     }
 
     @Test
@@ -119,7 +119,7 @@ class ManifestTest extends ServerTestSupport {
         JsonNode manifest = manifest();
         List<JsonNode> listed = listedTools();
 
-        assertThat(listed).hasSameSizeAs(manifest.get("tools")).hasSize(4);
+        assertThat(listed).hasSameSizeAs(manifest.get("tools")).hasSize(ToolCatalog.TOOLS.size());
         for (JsonNode tool : manifest.get("tools")) {
             String name = tool.get("name").asString();
             JsonNode published = listed.stream().filter(t -> t.get("name").asString().equals(name)).findFirst().orElseThrow();
@@ -139,18 +139,27 @@ class ManifestTest extends ServerTestSupport {
 
     @Test
     void theResourceRefsAndRisksAreDeclared() throws Exception {
-        Map<String, String> argument = Map.of("list_projects", "group", "get_file", "project",
-                "get_merge_request", "project", "comment_merge_request", "project");
-        Map<String, String> type = Map.of("list_projects", "GitLab::Group", "get_file", "GitLab::Project",
-                "get_merge_request", "GitLab::Project", "comment_merge_request", "GitLab::Project");
+        JsonNode tools = manifest().get("tools");
+        assertThat(tools).extracting(tool -> tool.get("name").asString()).containsExactlyInAnyOrderElementsOf(ToolCatalog.TOOLS.keySet());
+        for (JsonNode tool : tools) {
+            String name = tool.get("name").asString();
+            ToolCatalog.Entry expected = ToolCatalog.TOOLS.get(name);
+            assertThat(tool.get("resourceRefs")).as(name).hasSize(1);
+            assertThat(tool.at("/resourceRefs/0/argument").asString()).as(name).isEqualTo(expected.argument());
+            assertThat(tool.at("/resourceRefs/0/type").asString()).as(name).isEqualTo(expected.type());
+            assertThat(tool.get("risk").asString()).as(name).isEqualTo(expected.risk());
+            assertThat(tool.get("action").asString()).as(name).isEqualTo(expected.risk().equals("UPDATE") ? "update" : "read");
+        }
+    }
 
+    @Test
+    void mergeAndApproveAreUpdateNotDestructive() throws Exception {
         for (JsonNode tool : manifest().get("tools")) {
             String name = tool.get("name").asString();
-            assertThat(tool.get("resourceRefs")).as(name).hasSize(1);
-            assertThat(tool.at("/resourceRefs/0/argument").asString()).as(name).isEqualTo(argument.get(name));
-            assertThat(tool.at("/resourceRefs/0/type").asString()).as(name).isEqualTo(type.get(name));
-            assertThat(tool.get("risk").asString()).as(name)
-                    .isEqualTo(name.equals("comment_merge_request") ? "UPDATE" : "READ_ONLY");
+            if (name.equals("merge_merge_request") || name.equals("approve_merge_request")) {
+                assertThat(tool.get("risk").asString()).as(name).isEqualTo("UPDATE");
+            }
+            assertThat(tool.get("risk").asString()).as(name + " is never DESTRUCTIVE: nothing is deleted").isNotEqualTo("DESTRUCTIVE");
         }
     }
 

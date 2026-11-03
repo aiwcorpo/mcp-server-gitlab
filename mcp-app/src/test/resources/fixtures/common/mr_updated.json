@@ -1,0 +1,12 @@
+{
+ "id": 9001,
+ "iid": 1,
+ "project_id": 42,
+ "title": "New title",
+ "state": "opened",
+ "draft": false,
+ "labels": [
+  "backend"
+ ],
+ "web_url": "https://gitlab.aiwcorpo.internal/team-a/app/-/merge_requests/1"
+}

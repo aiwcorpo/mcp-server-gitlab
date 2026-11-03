@@ -14,7 +14,7 @@ class FileLimitWiringTest {
 
     private final ApplicationWiringConfiguration wiring = new ApplicationWiringConfiguration();
     private final GitLabBackendProperties backend = new GitLabBackendProperties("https://gitlab.internal", null,
-            Duration.ofSeconds(2), Duration.ofSeconds(10), DataSize.ofMegabytes(1), false);
+            Duration.ofSeconds(2), Duration.ofSeconds(10), DataSize.ofMegabytes(1), DataSize.ofMegabytes(8), false);
 
     @Test
     void theDefaultAndTheLargestAllowedLimitStart() {

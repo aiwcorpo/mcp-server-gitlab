@@ -8,7 +8,19 @@ package pl.aiwcorpo.mcp.gitlab.integration;
  */
 public class BackendResponseException extends RuntimeException {
 
+    private final boolean tooLarge;
+
     public BackendResponseException(String reason) {
+        this(reason, false);
+    }
+
+    BackendResponseException(String reason, boolean tooLarge) {
         super("backend response not usable: " + reason, null, false, false);
+        this.tooLarge = tooLarge;
+    }
+
+    /** The body went past the size limit of its client, as opposed to being unreadable. */
+    boolean tooLarge() {
+        return tooLarge;
     }
 }

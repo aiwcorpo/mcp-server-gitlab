@@ -2,6 +2,7 @@ package pl.aiwcorpo.mcp.gitlab.tools;
 
 import java.util.Optional;
 import org.springframework.stereotype.Component;
+import pl.aiwcorpo.mcp.gitlab.core.domain.BackendRefusedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileNotReturnedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ResourceNotFoundException;
 import pl.aiwcorpo.mcp.platform.error.McpErrorMapper.SafeError;
@@ -17,6 +18,16 @@ public class GitLabToolErrors implements ToolErrorMapping {
         if (ex instanceof ResourceNotFoundException) {
             return Optional.of(new SafeError(ToolErrorCode.NOT_FOUND_OR_DENIED.code(),
                     ToolErrorCode.NOT_FOUND_OR_DENIED_MESSAGE));
+        }
+        if (ex instanceof BackendRefusedException refused) {
+            String message = switch (refused.reason()) {
+                case CONFLICT -> "GitLab refused the change because it conflicts with the current state of the "
+                        + "project, for example the head commit moved or an open merge request for these branches exists.";
+                case REJECTED -> "GitLab refused the change: it is not valid in the current state of the project, for "
+                        + "example a draft, a missing branch or an unresolved blocker.";
+                case LOG_TOO_LARGE -> "The job log is larger than the server reads; its end is not returned.";
+            };
+            return Optional.of(new SafeError(ToolErrorCode.INVALID_ARGUMENT.code(), message));
         }
         if (ex instanceof FileNotReturnedException notReturned) {
             String message = switch (notReturned.reason()) {

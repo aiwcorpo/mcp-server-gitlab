@@ -6,6 +6,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import pl.aiwcorpo.mcp.gitlab.core.domain.BackendPage;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileMetadata;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileNotReturnedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FoundMergeRequest;
@@ -13,7 +14,6 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequest;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequestNote;
-import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectList;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectPage;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectSummary;
 import pl.aiwcorpo.mcp.gitlab.core.domain.RepositoryFile;
@@ -45,8 +45,8 @@ public class GitLabService implements GitLabUseCase {
     }
 
     @Override
-    public ProjectList listProjects(GitLabGroup group) {
-        ProjectPage page = gitlab.listGroupProjects(group.id(), GitLabPort.PAGE_SIZE);
+    public BackendPage<ProjectSummary> listProjects(GitLabGroup group, int pageNumber) {
+        ProjectPage page = gitlab.listGroupProjects(group.id(), GitLabPort.PAGE_SIZE, pageNumber);
         List<ProjectSummary> inGroup = new ArrayList<>();
         for (int i = 0; i < page.projects().size(); i++) {
             // with_shared=false already keeps projects of other namespaces out; this still holds if GitLab
@@ -55,7 +55,7 @@ public class GitLabService implements GitLabUseCase {
                 inGroup.add(page.projects().get(i));
             }
         }
-        return new ProjectList(group.fullPath(), inGroup, page.hasMore());
+        return new BackendPage<>(inGroup, page.nextPage());
     }
 
     @Override

@@ -3,6 +3,8 @@ package pl.aiwcorpo.mcp.gitlab.tools;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
@@ -20,6 +22,25 @@ final class GitLabArguments {
     static final int REF_MAX_LENGTH = 255;
     static final int BODY_MAX_LENGTH = 10_000;
     static final long IID_MAX = Integer.MAX_VALUE;
+    /** Largest integer a JSON client reads exactly; GitLab ids stay far below it. */
+    static final long ID_MAX = 9_007_199_254_740_991L;
+    static final int TITLE_MAX_LENGTH = 255;
+    static final int DESCRIPTION_MAX_LENGTH = 20_000;
+    static final int SEARCH_MAX_LENGTH = 200;
+    static final int LABELS_MAX_ITEMS = 20;
+    static final int LABEL_MAX_LENGTH = 100;
+
+    /** The values GitLab takes for the filters below; the same strings are published as {@code pattern} of the argument. */
+    static final String MR_STATE_PATTERN = "^(?:opened|closed|merged|all)$";
+    static final String ISSUE_STATE_PATTERN = "^(?:opened|closed|all)$";
+    static final String ISSUE_NEW_STATE_PATTERN = "^(?:opened|closed)$";
+    static final String PIPELINE_STATUS_PATTERN = "^(?:created|waiting_for_resource|preparing|pending|running|success|"
+            + "failed|canceled|skipped|manual|scheduled)$";
+    static final String USERNAME_PATTERN = "^[A-Za-z0-9_.-]{1,255}$";
+    static final String LABEL_PATTERN = "^[^,]{1,100}$";
+    static final String COMMIT_PATTERN = "^[0-9a-f]{7,40}$";
+    static final String HEAD_SHA_PATTERN = "^[0-9a-f]{40}$";
+    static final String DATE_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$";
 
     static final Pattern GROUP_PATH = contractPattern("GitLabGroupPath");
     static final Pattern PROJECT_PATH = contractPattern("GitLabProjectPath");
@@ -130,6 +151,114 @@ final class GitLabArguments {
         return ref;
     }
 
+    /** A directory of the repository; {@code null} or empty is the root. */
+    static String treePath(String path) {
+        return path == null || path.isEmpty() ? null : filePath(path);
+    }
+
+    private static final Pattern MR_STATE = Pattern.compile(MR_STATE_PATTERN);
+    private static final Pattern ISSUE_STATE = Pattern.compile(ISSUE_STATE_PATTERN);
+    private static final Pattern ISSUE_NEW_STATE = Pattern.compile(ISSUE_NEW_STATE_PATTERN);
+    private static final Pattern PIPELINE_STATUS = Pattern.compile(PIPELINE_STATUS_PATTERN);
+    private static final Pattern USERNAME = Pattern.compile(USERNAME_PATTERN);
+    private static final Pattern LABEL = Pattern.compile(LABEL_PATTERN);
+    private static final Pattern COMMIT = Pattern.compile(COMMIT_PATTERN);
+    private static final Pattern HEAD_SHA = Pattern.compile(HEAD_SHA_PATTERN);
+    private static final Pattern DATE = Pattern.compile(DATE_PATTERN);
+
+    static String mergeRequestState(String state) {
+        return oneOf(state, MR_STATE, "state must be one of opened, closed, merged, all");
+    }
+
+    static String issueState(String state) {
+        return oneOf(state, ISSUE_STATE, "state must be one of opened, closed, all");
+    }
+
+    static String newIssueState(String state) {
+        return oneOf(state, ISSUE_NEW_STATE, "state must be opened or closed");
+    }
+
+    static String pipelineStatus(String status) {
+        return oneOf(status, PIPELINE_STATUS, "status must be a GitLab pipeline status such as success, failed or running");
+    }
+
+    static String username(String username) {
+        return oneOf(username, USERNAME, "a user must be given by GitLab username: letters, digits, '.', '_' or '-', "
+                + "at most 255 characters");
+    }
+
+    static String commit(String sha) {
+        return oneOf(sha, COMMIT, "sha must be a commit id in lower case hexadecimal, 7 to 40 characters");
+    }
+
+    /** The full commit id that an approval or a merge is bound to. */
+    static String headSha(String sha) {
+        return oneOf(sha, HEAD_SHA, "expectedHeadSha must be the full 40 character commit id in lower case hexadecimal");
+    }
+
+    static String date(String date) {
+        return oneOf(date, DATE, "a date must be YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ");
+    }
+
+    private static String oneOf(String value, Pattern allowed, String message) {
+        if (value == null) {
+            return null;
+        }
+        if (!allowed.matcher(value).matches()) {
+            throw new InvalidToolArgumentException(message);
+        }
+        return value;
+    }
+
+    /** Labels as a set to replace or filter by: GitLab separates them by commas, so a comma cannot be part of one. */
+    static List<String> labels(List<String> labels) {
+        if (labels == null) {
+            return null;
+        }
+        if (labels.size() > LABELS_MAX_ITEMS) {
+            throw new InvalidToolArgumentException("labels must have at most " + LABELS_MAX_ITEMS + " entries");
+        }
+        List<String> checked = new ArrayList<>();
+        for (String label : labels) {
+            if (label == null || !LABEL.matcher(label).matches() || label.isBlank()) {
+                throw new InvalidToolArgumentException("a label must be 1-100 characters, not blank and without ','");
+            }
+            checked.add(TextHygiene.normalize(label));
+        }
+        return List.copyOf(checked);
+    }
+
+    /** A title of a merge request or an issue: one line, not blank. */
+    static String title(String title) {
+        if (title == null || title.length() > TITLE_MAX_LENGTH || title.isBlank()
+                || title.indexOf('\n') >= 0 || title.indexOf('\r') >= 0) {
+            throw new InvalidToolArgumentException("title must be one line of 1-255 characters and not blank");
+        }
+        return TextHygiene.normalize(title);
+    }
+
+    /** A free text search term; it is a term, not a query language, and the scope of the search is fixed by the tool. */
+    static String searchTerm(String term) {
+        if (term == null || term.isBlank() || term.length() > SEARCH_MAX_LENGTH) {
+            throw new InvalidToolArgumentException("query must be 1-200 characters and not blank");
+        }
+        return TextHygiene.normalize(term);
+    }
+
+    static long bounded(Long value, long min, long max, String name) {
+        if (value == null || value < min || value > max) {
+            throw new InvalidToolArgumentException(name + " must be between " + min + " and " + max);
+        }
+        return value;
+    }
+
+    static long id(Long id, String name) {
+        if (id == null || id < 1 || id > ID_MAX) {
+            throw new InvalidToolArgumentException(name + " must be a positive number");
+        }
+        return id;
+    }
+
     static long iid(Long iid) {
         if (iid == null || iid < 1 || iid > IID_MAX) {
             throw new InvalidToolArgumentException("iid must be the merge request number within the project, "
@@ -144,26 +273,35 @@ final class GitLabArguments {
      * or the quick action is gone, instead of being joined into one.
      */
     static String commentBody(String body) {
-        if (body == null || body.length() > BODY_MAX_LENGTH) {
-            throw new InvalidToolArgumentException("body must be 1-10000 characters and not blank");
+        return markdownText("body", body, BODY_MAX_LENGTH);
+    }
+
+    /** A description of a merge request or an issue: GitLab runs quick actions and mentions in it as in a comment. */
+    static String description(String description) {
+        return description == null ? null : markdownText("description", description, DESCRIPTION_MAX_LENGTH);
+    }
+
+    private static String markdownText(String field, String body, int maxLength) {
+        if (body == null || body.length() > maxLength) {
+            throw new InvalidToolArgumentException(field + " must be 1-" + maxLength + " characters and not blank");
         }
         if (TextHygiene.firstProblem(body, false, true) != null) {
-            throw new InvalidToolArgumentException("body must not contain control characters other than "
+            throw new InvalidToolArgumentException(field + " must not contain control characters other than "
                     + "line breaks and tabs, or invisible and bidi formatting characters");
         }
         String text = TextHygiene.normalize(body);
         if (text.isBlank()) {
-            throw new InvalidToolArgumentException("body must be 1-10000 characters and not blank");
+            throw new InvalidToolArgumentException(field + " must be 1-" + maxLength + " characters and not blank");
         }
         // ZWNJ, ZWJ, LRM and RLM stay in the text (the starter allows them in free text) but are not word
         // characters to a mention or quick action parser, so both are looked for with and without them.
         for (String seen : new String[] {text, INVISIBLE_JOINERS.matcher(text).replaceAll("")}) {
             if (QUICK_ACTION.matcher(seen).find()) {
-                throw new InvalidToolArgumentException("body must not contain a line starting with '/': GitLab would "
+                throw new InvalidToolArgumentException(field + " must not contain a line starting with '/': GitLab would "
                         + "run it as a quick action");
             }
             if (MENTION_ALL.matcher(seen).find() || MENTION_ALL.matcher(decodedCharacterReferences(seen)).find()) {
-                throw new InvalidToolArgumentException("body must not mention @all: it notifies every member of the project");
+                throw new InvalidToolArgumentException(field + " must not mention @all: it notifies every member of the project");
             }
         }
         return text;
