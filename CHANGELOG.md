@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Starter 3.0.0-beta-13 (contracts 6.2.1).
+- Starter 3.0.0-beta-14 (contracts 6.3.2).
 - GitLab self-managed 17.0 to 19.x: tolerant reads of renamed fields (`detailed_merge_status`, `merge_user`, `draft`), draft
   filter by version, version learned from the first request with a user credential (the server holds no credential of its
   own); outside the range the server runs in the `degraded` state.

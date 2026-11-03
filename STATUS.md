@@ -2,7 +2,7 @@
 
 ## M6 etap 3: pełny serwer GitLab (2026-11-03)
 
-Starter 3.0.0-beta-13 (kontrakty 6.2.1). 30 narzędzi (20 `READ_ONLY`, 10 `UPDATE`), katalog w README i `docs/api/tools-catalog.md`.
+Starter 3.0.0-beta-14 (kontrakty 6.3.2). 30 narzędzi (20 `READ_ONLY`, 10 `UPDATE`), katalog w README i `docs/api/tools-catalog.md`.
 Merge i approve to `UPDATE` (W-8) i wymagają pełnego id commita (`expectedHeadSha`). Listy przez `PagedResult` i `CursorCodec`;
 `list_projects` zmienił kształt wyniku (`items`, `nextCursor`). Brak narzędzia typu dowolna ścieżka API lub GraphQL, brak
 zapisu do repozytorium, usuwania i uruchamiania pipeline'u ze zmiennymi.
