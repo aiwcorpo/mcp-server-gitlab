@@ -7,14 +7,14 @@ needs approval before it is implemented here.
 ## Setup
 
 JDK 25. No container runtime is needed: tests run against `TestGateway` and an in-process stub of GitLab. The
-`mcp-platform-bom` artifacts (starter, contracts) must be in `~/.m2` or in the registry named by
-`MCP_MAVEN_REPOSITORY_URL`. Linux and macOS with bash 3.2 or newer; Windows only through WSL2.
+`mcp-platform-bom` artifacts (starter, contracts) come from Maven Central, or must already be in `~/.m2`. Linux and macOS
+with bash 3.2 or newer; Windows only through WSL2.
 
 ```bash
 ci/run.sh verify     # text checks, then clean verify; the same script runs in CI
 ```
 
-`docs/jak-napisac-narzedzie.md` describes how to add a tool. A new tool needs: `@ToolTitle`, `@ToolRisk`,
+`docs/developer/tools.md` in `mcp-docs` describes how to add a tool. A new tool needs: `@ToolTitle`, `@ToolRisk`,
 `@ResourceRef` on the argument that names the project or group, a closed argument schema, an entry in `ToolCatalog`
 (test), a test in the style of `RepositoryToolsTest` or `MergeRequestToolsTest`, and a row in the README table. A tool
 that takes an id below a project must address it under the project and check that the answer names the same project.
