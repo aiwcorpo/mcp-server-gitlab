@@ -54,7 +54,7 @@ public class GitLabTools {
             + "description, default branch, archived flag, last activity and web URL, and nextCursor when more "
             + "projects exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Lista projektów grupy")
+    @ToolTitle("List projects")
     public PagedResult<ProjectSummary> listProjects(
             @ToolParam(description = "Full path of the group, e.g. team-a or team-a/sub")
             @ArgumentLimits(contractPattern = "GitLabGroupPath", minLength = 1)
@@ -79,7 +79,7 @@ public class GitLabTools {
             + "or commit: project path, file path, ref, commit id, size in bytes and the content. Binary files and "
             + "files over the size limit are refused without content.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Pobierz plik z repozytorium")
+    @ToolTitle("Get file")
     public RepositoryFile getFile(
             @ToolParam(description = PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)

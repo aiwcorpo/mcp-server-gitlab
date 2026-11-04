@@ -40,7 +40,7 @@ public class IssueTools {
             + "assignee, labels (all of them) and a word in the title or description. Returns nextCursor when more "
             + "issues exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Lista zgłoszeń")
+    @ToolTitle("List issues")
     public PagedResult<IssueSummary> listIssues(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -72,7 +72,7 @@ public class IssueTools {
     @Tool(name = "get_issue", description = "Returns one issue of a GitLab project by its number (iid): title, "
             + "description, state, type, author, assignees, labels, timestamps and web URL.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Pobierz zgłoszenie")
+    @ToolTitle("Get issue")
     public Issue getIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -86,7 +86,7 @@ public class IssueTools {
             + "page: id, author, text (cut at 4000 characters), whether it is a system note (GitLab's own log line) "
             + "and creation time. Returns truncated when a text was cut and nextCursor when more notes exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Komentarze zgłoszenia")
+    @ToolTitle("List issue notes")
     public PagedResult<NoteView> listIssueNotes(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -107,7 +107,7 @@ public class IssueTools {
             + "call creates another issue. Lines of the description starting with '/' (quick actions) are refused. "
             + "Returns the project, number, title, state and web URL.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Utwórz zgłoszenie")
+    @ToolTitle("Create issue")
     public IssueChange createIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -129,7 +129,7 @@ public class IssueTools {
             + "call changes nothing more. Lines of the description starting with '/' (quick actions) are refused. "
             + "Returns the project, number, title, state and web URL.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Zmień zgłoszenie")
+    @ToolTitle("Update issue")
     public IssueChange updateIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -157,7 +157,7 @@ public class IssueTools {
             + "Lines starting with '/' (GitLab quick actions) are refused. A repeated call adds the comment again. "
             + "Returns the project, the issue number, the new comment's id, its author and creation time.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Dodaj komentarz do zgłoszenia")
+    @ToolTitle("Comment issue")
     public IssueNote commentIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)

@@ -41,7 +41,7 @@ public class PipelineTools {
             + "status, source, ref, commit, the user who started it, times, duration in seconds and web URL. "
             + "Optionally limited to a branch or tag and to a status. Returns nextCursor when more pipelines exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Lista pipeline'ów")
+    @ToolTitle("List pipelines")
     public PagedResult<Pipeline> listPipelines(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -63,7 +63,7 @@ public class PipelineTools {
     @Tool(name = "get_pipeline", description = "Returns one CI pipeline of a project: id, status, source, ref, commit, the "
             + "user who started it, times, duration in seconds and web URL.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Pobierz pipeline")
+    @ToolTitle("Get pipeline")
     public Pipeline getPipeline(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -78,7 +78,7 @@ public class PipelineTools {
             + "whether a failure is allowed, times, duration in seconds and web URL. Returns nextCursor when more "
             + "jobs exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Zadania pipeline'u")
+    @ToolTitle("List pipeline jobs")
     public PagedResult<PipelineJob> listPipelineJobs(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -100,7 +100,7 @@ public class PipelineTools {
             + "The text is marked truncated when earlier lines were left out. A log over the size the server reads is "
             + "refused.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Log zadania CI")
+    @ToolTitle("Get job log")
     public JobLog getJobLog(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -118,7 +118,7 @@ public class PipelineTools {
             + "user. Other jobs are left alone, so a repeated call does not start the pipeline over. Returns the "
             + "pipeline: id, status, ref, commit and web URL.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Ponów nieudane zadania pipeline'u")
+    @ToolTitle("Retry pipeline")
     public Pipeline retryPipeline(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -133,7 +133,7 @@ public class PipelineTools {
             + "pipeline that already finished stays as it is, so a repeated call changes nothing. Returns the "
             + "pipeline: id, status, ref, commit and web URL.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Anuluj pipeline")
+    @ToolTitle("Cancel pipeline")
     public Pipeline cancelPipeline(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)

@@ -50,7 +50,7 @@ public class MergeRequestTools {
             + "and web URL. Optionally limited by state, author, reviewer, labels (all of them), target branch and "
             + "draft status. Returns nextCursor when more merge requests exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Lista merge requestów")
+    @ToolTitle("List merge requests")
     public PagedResult<MergeRequestSummary> listMergeRequests(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -85,7 +85,7 @@ public class MergeRequestTools {
             + "reviewers, labels, timestamps, merge status, conflict flag, the user who merged it, the head commit "
             + "id of the source branch and web URL.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Pobierz merge request")
+    @ToolTitle("Get merge request")
     public MergeRequest getMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -99,7 +99,7 @@ public class MergeRequestTools {
             + "old and new path, whether the file was added, renamed or deleted, and the diff text, cut at 16000 "
             + "characters per file. Returns truncated when a diff was cut and nextCursor when more files exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Zmiany w merge requeście")
+    @ToolTitle("List merge request diffs")
     public PagedResult<FileDiff> listMergeRequestDiffs(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -121,7 +121,7 @@ public class MergeRequestTools {
             + "(GitLab's own log line) and creation time. Returns truncated when a text was cut and nextCursor when "
             + "more notes exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Komentarze merge requesta")
+    @ToolTitle("List merge request notes")
     public PagedResult<NoteView> listMergeRequestNotes(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -143,7 +143,7 @@ public class MergeRequestTools {
             + "comment again. Returns the project, the merge request number, the new comment's id, its author and "
             + "creation time.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Dodaj komentarz do merge requesta")
+    @ToolTitle("Comment merge request")
     public MergeRequestNote commentMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -161,7 +161,7 @@ public class MergeRequestTools {
             + "request for the same branches, so a repeated call changes nothing. Lines of the description starting "
             + "with '/' (quick actions) are refused. Returns the project, number, title, state, draft flag and web URL.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Utwórz merge request")
+    @ToolTitle("Create merge request")
     public MergeRequestChange createMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -185,7 +185,7 @@ public class MergeRequestTools {
             + "changes nothing more. Lines of the description starting with '/' (quick actions) are refused. "
             + "Returns the project, number, title, state, draft flag and web URL.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Zmień merge request")
+    @ToolTitle("Update merge request")
     public MergeRequestChange updateMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -215,7 +215,7 @@ public class MergeRequestTools {
             + "moved on. A repeated call by the same user reports the existing approval of that commit. Returns the project, number, the "
             + "commit approved and the number of approvals GitLab reports.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Zatwierdź merge request")
+    @ToolTitle("Approve merge request")
     public ApprovalResult approveMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -235,7 +235,7 @@ public class MergeRequestTools {
             + "The source branch is never deleted by this call. A merge request that is already merged at that "
             + "commit is reported as alreadyMerged, so a repeated call changes nothing. Returns the project, number, state, merge commit id and merge time.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Scal merge request")
+    @ToolTitle("Merge merge request")
     public MergeOutcome mergeMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)

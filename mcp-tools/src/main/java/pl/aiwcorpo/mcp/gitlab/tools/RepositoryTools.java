@@ -38,7 +38,7 @@ public class RepositoryTools {
     @Tool(name = "get_project", description = "Returns one GitLab project: full path, name, description, default "
             + "branch, visibility, archived flag, last activity and web URL.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Pobierz projekt")
+    @ToolTitle("Get project")
     public ProjectDetails getProject(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -50,7 +50,7 @@ public class RepositoryTools {
             + "subdirectories), 100 per page: path and type (blob for a file, tree for a directory, commit for a "
             + "submodule). Returns nextCursor when more entries exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Zawartość katalogu repozytorium")
+    @ToolTitle("List repository tree")
     public PagedResult<TreeEntry> listRepositoryTree(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -75,7 +75,7 @@ public class RepositoryTools {
             + "file path, first line number of the match and the matching lines. The search is limited to this "
             + "project, on its default branch or on the given ref. Returns nextCursor when more hits exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Szukaj w kodzie projektu")
+    @ToolTitle("Search code")
     public PagedResult<CodeHit> searchCode(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -98,7 +98,7 @@ public class RepositoryTools {
             + "default or a protected branch, whether it is merged into the default branch, and its last commit. "
             + "Returns nextCursor when more branches exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Lista gałęzi")
+    @ToolTitle("List branches")
     public PagedResult<Branch> listBranches(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -118,7 +118,7 @@ public class RepositoryTools {
             + "author name, authoring time and web URL. Optionally limited to a branch or tag, to the commits that "
             + "touched one path, and to a period. Returns nextCursor when more commits exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Lista commitów")
+    @ToolTitle("List commits")
     public PagedResult<Commit> listCommits(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -146,7 +146,7 @@ public class RepositoryTools {
     @Tool(name = "get_commit", description = "Returns one commit of a project: id, title, full message, author name, "
             + "authoring time, number of added and deleted lines and web URL.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Pobierz commit")
+    @ToolTitle("Get commit")
     public Commit getCommit(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -160,7 +160,7 @@ public class RepositoryTools {
             + "path, whether the file was added, renamed or deleted, and the diff text, cut at 16000 characters per "
             + "file. Returns truncated when a diff was cut and nextCursor when more files exist.")
     @ToolRisk(RiskLevel.READ_ONLY)
-    @ToolTitle("Zmiany w commicie")
+    @ToolTitle("Get commit diff")
     public PagedResult<FileDiff> getCommitDiff(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
