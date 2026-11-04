@@ -32,7 +32,9 @@ poświadczenia sondy.
 
 ## Fala wydania (2026-11-04)
 
-Tytuły narzędzi po angielsku (30, wszystkie `definitionHash` zmienione, nazwy, opisy, schematy i ryzyko bez zmian); CI bez GitHub Packages (zależności z Maven Central, bez `.ci/`, `MCP_MAVEN_REPOSITORY_*` i `packages: read`; wersje bez zmian, podbicie do 1.0.0 w następnym przebiegu); zadanie pull request z `contents: read` i bez tokenu; `release.yml` (obraz do ghcr.io/aiwcorpo, SBOM, GitHub Release) i etykieta `org.opencontainers.image.source`; folder `docs/` usunięty (unikalne fragmenty przekazane koordynatorowi); `make ci` zielony (187 testów w modułach); obraz `mcp-server-gitlab:m6-433977c` (zbudowany z 433977c; następny commit zmienia tylko dokumentację i STATUS.md).
+Tytuły narzędzi po angielsku (30, wszystkie `definitionHash` zmienione, nazwy, opisy, schematy i ryzyko bez zmian); CI bez GitHub Packages (zależności z Maven Central, bez `.ci/`, `MCP_MAVEN_REPOSITORY_*` i `packages: read`; wersje podbite w kolejnym wpisie); zadanie pull request z `contents: read` i bez tokenu; `release.yml` (obraz do ghcr.io/aiwcorpo, SBOM, GitHub Release) i etykieta `org.opencontainers.image.source`; folder `docs/` usunięty (unikalne fragmenty przekazane koordynatorowi); `make ci` zielony (187 testów w modułach); obraz `mcp-server-gitlab:m6-433977c` (zbudowany z 433977c; następny commit zmienia tylko dokumentację i STATUS.md).
+
+Wydanie 1.0.0 (2026-11-04): wersja projektu 1.0.0, `mcp-platform.version` 3.0.0 (kontrakty 6.3.2), wpis 1.0.0 w CHANGELOG.md, README na starterze 3.0.0; tytuły: `comment_issue` "Comment on issue", `comment_merge_request` "Comment on merge request", `merge_merge_request` "Merge a merge request" (testy nie asercjonują tytułów); `make ci` zielony (187 testów w modułach); obraz `mcp-server-gitlab:m6-ad183c4` (zbudowany z ad183c4; następny commit zmienia tylko STATUS.md).
 
 ## M5 (2026-10-31)
 
