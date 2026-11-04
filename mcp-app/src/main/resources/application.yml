@@ -63,7 +63,7 @@ gitlab:
     max-json-size: ${MCP_GITLAB_MAX_JSON_SIZE:8MB}
     # GitLab cannot return only the end of a job log, so get_job_log reads the whole log (up to this size) to cut it.
     max-log-size: ${MCP_GITLAB_MAX_LOG_SIZE:8MB}
-    # Plain http outside 'dev' only for the mocks of mcp-platform-dev; never in a real deployment.
+    # Plain http outside 'dev' only for the mocks of the dev stack; never in a real deployment.
     allow-plain-http: ${MCP_GITLAB_ALLOW_PLAIN_HTTP:false}
   files:
     # Larger files are refused without reading their content (get_file).

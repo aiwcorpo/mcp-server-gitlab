@@ -21,7 +21,7 @@ import org.springframework.util.unit.DataSize;
  * @param maxLogSize      the most of a job log the server reads to find its end ({@code MCP_GITLAB_MAX_LOG_SIZE});
  *                        GitLab cannot return only the tail, so the whole log passes through memory once; a larger
  *                        log is refused
- * @param allowPlainHttp  {@code http} outside the dev profile, for the mocks of mcp-platform-dev only
+ * @param allowPlainHttp  {@code http} outside the dev profile, for the mocks of the dev stack only
  *                        ({@code MCP_GITLAB_ALLOW_PLAIN_HTTP}); the credential then crosses the network in clear text
  */
 @ConfigurationProperties("gitlab.backend")
