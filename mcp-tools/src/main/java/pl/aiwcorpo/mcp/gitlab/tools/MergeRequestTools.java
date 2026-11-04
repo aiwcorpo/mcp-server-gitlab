@@ -143,7 +143,7 @@ public class MergeRequestTools {
             + "comment again. Returns the project, the merge request number, the new comment's id, its author and "
             + "creation time.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Comment merge request")
+    @ToolTitle("Comment on merge request")
     public MergeRequestNote commentMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
@@ -235,7 +235,7 @@ public class MergeRequestTools {
             + "The source branch is never deleted by this call. A merge request that is already merged at that "
             + "commit is reported as alreadyMerged, so a repeated call changes nothing. Returns the project, number, state, merge commit id and merge time.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Merge merge request")
+    @ToolTitle("Merge a merge request")
     public MergeOutcome mergeMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)

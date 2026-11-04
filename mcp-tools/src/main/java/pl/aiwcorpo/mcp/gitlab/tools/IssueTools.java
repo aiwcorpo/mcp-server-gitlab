@@ -157,7 +157,7 @@ public class IssueTools {
             + "Lines starting with '/' (GitLab quick actions) are refused. A repeated call adds the comment again. "
             + "Returns the project, the issue number, the new comment's id, its author and creation time.")
     @ToolRisk(RiskLevel.UPDATE)
-    @ToolTitle("Comment issue")
+    @ToolTitle("Comment on issue")
     public IssueNote commentIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
             @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
