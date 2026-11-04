@@ -30,6 +30,10 @@ niezgodnym `sha` (atrapa: 409), dokładna reguła `401` przy `approve` i `merge`
 logów zadań dla roli Reporter, obraz w pipeline'ie. Propozycja kontraktu: CC-216 (`GitLab::MergeRequest`); CC-215 dotyczy
 poświadczenia sondy.
 
+## Fala wydania (2026-11-04)
+
+Tytuły narzędzi po angielsku (30, wszystkie `definitionHash` zmienione, nazwy, opisy, schematy i ryzyko bez zmian); CI bez GitHub Packages (zależności z Maven Central, bez `.ci/`, `MCP_MAVEN_REPOSITORY_*` i `packages: read`; wersje bez zmian, podbicie do 1.0.0 w następnym przebiegu); zadanie pull request z `contents: read` i bez tokenu; `release.yml` (obraz do ghcr.io/aiwcorpo, SBOM, GitHub Release) i etykieta `org.opencontainers.image.source`; folder `docs/` usunięty (unikalne fragmenty przekazane koordynatorowi); `make ci` zielony (187 testów w modułach); obraz `mcp-server-gitlab:m6-433977c` (zbudowany z 433977c; następny commit zmienia tylko dokumentację i STATUS.md).
+
 ## M5 (2026-10-31)
 
 Kamienie: starter 3.0.0-beta-10 (kontrakty 5.1.0) i README; testy odrzucenia tokenu z `vs` i `vsc` (`extraClaim`,
