@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.0.0
+
+Major release: the policies of the server live in this repository. Built on `mcp-platform-starter` 4.0.0 and `mcp-contracts` 7.0.0.
+
+- Cedar policies in `mcp-app/src/main/resources/mcp/policies/` (schema in the namespace `GitLab`, `resource-types.json`, `read.cedar`,
+  `update.cedar`, `restricted.cedar`), carried in the manifest with `policiesHash`. They replace `policies/gitlab/` of the `mcp-policies`
+  repository; the rules are the same, except what the platform now generates for every server: the call rules by group, the forbid
+  for `restricted` groups and projects (own topics and the topics of the parent group) and the rule for the service account.
+- A deployed server whose policies or declarations changed waits for approval in the gateway: it refuses calls (`policies_not_approved`,
+  `policies_differ`) until an administrator approves the new `policiesHash`. Register the new manifest and approve before the first call.
+- The scopes and the inherited classification that the entity builder used to derive are now the job of the resolvers. Both give a
+  group and a project the scope `GitLab::Group/<path>` of every group on the path (`Scopes.pathPrefixes`) and the attribute
+  `inheritedClassification`, and both provide the grant probe (`probe(id)`), so a caller without a grant is refused before GitLab is asked.
+- The `idPattern` of the declarations no longer expresses the 20 levels of subgroups or the ban on `.git` and `.atom` (CC-237).
+  `GitLabPaths` checks both in the resolvers and in the argument checks; a path that breaks them is `invalid_argument` and never reaches
+  GitLab. The ban now applies to every segment, as GitLab has it, not only to the end of the path. Path arguments take their pattern from
+  the declared types (`@ArgumentLimits(resourceType = ...)`) instead of `GitLabGroupPath` and `GitLabProjectPath`.
+- Removed: `MCP_POLICY_URL`, `MCP_POLICY_KEY_ID`, `MCP_POLICY_PUBLIC_KEY_FILE`, `MCP_POLICY_STATE_DIR` and the signed policy bundle. Added:
+  `MCP_GATEWAY_POLICY_DATA_URL` (and `MCP_GATEWAY_TLS_NAME` when the host in it is not a name of the gateway certificate). The server
+  connects to the gateway for the policy data with its own certificate, which now needs the usage `clientAuth` next to `serverAuth`
+  (CN `mcp-gitlab`, SAN `mcp-gitlab.internal`).
+- `deploy/` has `compose.yaml`, `mcp-gitlab.env` and `certs/` next to the systemd files, and the procedure that adds the system `gitlab`
+  in the broker and the server `mcp-gitlab` in the gateway without restarting anything.
+- `.run/` has IntelliJ configurations for the server and for the `LocalGateway` of `mcp-platform-test`.
+
 ## 1.0.0
 
 First public release. MCP server for self-managed GitLab 17.0 to 19.x (REST API v4), run behind the platform gateway. Built on

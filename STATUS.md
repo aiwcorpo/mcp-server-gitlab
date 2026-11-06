@@ -1,5 +1,9 @@
 # STATUS - mcp-server-gitlab (ws-04)
 
+## Wersja 2.0.0: serwery dynamiczne (2026-11-06)
+
+Starter 4.0.0 i kontrakty 7.0.0; polityki GitLaba w `mcp-app/src/main/resources/mcp/policies/` (schemat `GitLab`, `resource-types.json`, `read.cedar`, `update.cedar`, `restricted.cedar`) zamiast `policies/gitlab/` w `mcp-policies`; reguły `call` po grupie, zakaz dla `restricted` (własne topics i grupa-rodzic) i konto serwisowe generuje platforma, w polityce serwera zostaje tylko zakaz z `inheritedClassification`. Resolvery liczą zakresy (`GitLab::Group/<prefiks ścieżki>`) i `inheritedClassification` oraz dają sondę przydziału. Wzorzec `idPattern` nie wyraża limitu 20 poziomów ani zakazu `.git`/`.atom` (CC-237): sprawdza je `GitLabPaths` w resolverach i w `GitLabArguments` (testy w `GitLabPathsTest`, `GitLabArgumentsTest`, `GetFileToolTest`, `ListProjectsToolTest`). `GitLabPolicyDecisionsTest` (20 przypadków, `PolicyDecisions`) przenosi przypadki serwerowe z `tests/decisions` i `tests/scopes`; ustawienia `MCP_POLICY_*` zastąpione przez `MCP_GATEWAY_POLICY_DATA_URL`. `deploy/` ma `compose.yaml`, `mcp-gitlab.env`, `certs/` i procedurę dodania serwera do platformy; `.run/` ma konfiguracje IntelliJ. Do zrobienia przez człowieka: zarejestrować manifest i zatwierdzić polityki w gatewayu przed pierwszym ruchem. Uwaga: resolver nie pyta o topics grup nad zasobem (decyzja z 2026-10-28), więc `inheritedClassification` jest dziś zawsze puste; zmiana źródła danych w `AncestorLookup` wystarczy, żeby polityka zaczęła działać na całym poddrzewie.
+
 ## M6 etap 3: pełny serwer GitLab (2026-11-03)
 
 Starter 3.0.0-beta-14 (kontrakty 6.3.2). 30 narzędzi (20 `READ_ONLY`, 10 `UPDATE`), katalog w README i `docs/api/tools-catalog.md`.
