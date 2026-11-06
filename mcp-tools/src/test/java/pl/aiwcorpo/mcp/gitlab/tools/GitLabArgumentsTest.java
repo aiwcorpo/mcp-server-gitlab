@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
+import pl.aiwcorpo.mcp.cedar.entities.ResourceTypes;
 import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -17,17 +18,17 @@ class GitLabArgumentsTest {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @Test
-    void pathLimitIsTheContractLimit() throws IOException {
-        JsonNode defs = read("mcp-contracts/schemas/common.schema.json").path("$defs");
-
-        assertThat(defs.path("GitLabGroupPath").path("maxLength").asInt()).isEqualTo(GitLabArguments.PATH_MAX_LENGTH);
-        assertThat(defs.path("GitLabProjectPath").path("maxLength").asInt()).isEqualTo(GitLabArguments.PATH_MAX_LENGTH);
+    void pathLimitIsTheLongestIdTheBuilderMatches() {
+        assertThat(GitLabArguments.PATH_MAX_LENGTH).isEqualTo(ResourceTypes.MAX_ID_LENGTH);
     }
 
     @Test
     void groupFollowsTheContractVectors() throws IOException {
         checkVectors("mcp-contracts/test-vectors/resource-ids/gitlab-group.json", GitLabArguments::group);
         assertThatThrownBy(() -> GitLabArguments.group("a/".repeat(20) + "b")).isInstanceOf(InvalidToolArgumentException.class);
+        assertThatCode(() -> GitLabArguments.group("a/".repeat(19) + "b")).doesNotThrowAnyException();
+        assertThatThrownBy(() -> GitLabArguments.group("team-a/sub.git")).isInstanceOf(InvalidToolArgumentException.class);
+        assertThatThrownBy(() -> GitLabArguments.group("team.atom/sub")).isInstanceOf(InvalidToolArgumentException.class);
         assertThatThrownBy(() -> GitLabArguments.group("a".repeat(1025))).isInstanceOf(InvalidToolArgumentException.class);
         assertThatThrownBy(() -> GitLabArguments.group(null)).isInstanceOf(InvalidToolArgumentException.class);
     }
@@ -35,6 +36,11 @@ class GitLabArgumentsTest {
     @Test
     void projectFollowsTheContractVectors() throws IOException {
         checkVectors("mcp-contracts/test-vectors/resource-ids/gitlab-project.json", GitLabArguments::project);
+        assertThatThrownBy(() -> GitLabArguments.project("a/".repeat(21) + "b")).isInstanceOf(InvalidToolArgumentException.class);
+        assertThatCode(() -> GitLabArguments.project("a/".repeat(20) + "b")).doesNotThrowAnyException();
+        assertThatThrownBy(() -> GitLabArguments.project("team-a/app.git")).isInstanceOf(InvalidToolArgumentException.class);
+        assertThatThrownBy(() -> GitLabArguments.project("team-a/app.atom")).isInstanceOf(InvalidToolArgumentException.class);
+        assertThatThrownBy(() -> GitLabArguments.project("team.git/app")).isInstanceOf(InvalidToolArgumentException.class);
         assertThatThrownBy(() -> GitLabArguments.project("42")).as("numeric ids are not accepted, only paths")
                 .isInstanceOf(InvalidToolArgumentException.class);
         assertThatThrownBy(() -> GitLabArguments.project("team-a/app?private_token=x"))

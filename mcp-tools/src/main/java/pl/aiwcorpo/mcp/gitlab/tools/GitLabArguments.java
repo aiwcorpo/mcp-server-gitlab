@@ -1,24 +1,21 @@
 package pl.aiwcorpo.mcp.gitlab.tools;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabPaths;
 import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
 import pl.aiwcorpo.mcp.platform.text.TextHygiene;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Checks of tool arguments, before anything reaches GitLab. Group and project paths use the patterns of the
- * contract (mcp-contracts {@code common.schema.json}, {@code GitLabGroupPath} and {@code GitLabProjectPath},
- * CC-056), the same ones the tools publish in their input schemas; a test runs the contract's vectors.
+ * Checks of tool arguments, before anything reaches GitLab. Group and project paths follow {@link GitLabPaths}: the
+ * {@code idPattern} the tools publish in their input schemas plus the limits of GitLab that the pattern grammar of the
+ * contracts cannot express; a test runs the contract's vectors.
  */
 final class GitLabArguments {
 
-    static final int PATH_MAX_LENGTH = 1024;
+    static final int PATH_MAX_LENGTH = GitLabPaths.MAX_LENGTH;
     static final int REF_MAX_LENGTH = 255;
     static final int BODY_MAX_LENGTH = 10_000;
     static final long IID_MAX = Integer.MAX_VALUE;
@@ -41,9 +38,6 @@ final class GitLabArguments {
     static final String COMMIT_PATTERN = "^[0-9a-f]{7,40}$";
     static final String HEAD_SHA_PATTERN = "^[0-9a-f]{40}$";
     static final String DATE_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$";
-
-    static final Pattern GROUP_PATH = contractPattern("GitLabGroupPath");
-    static final Pattern PROJECT_PATH = contractPattern("GitLabProjectPath");
 
     /** Branch and tag names, a conservative subset of git-check-ref-format; commit SHAs fit too. */
     private static final Pattern REF = Pattern.compile("[A-Za-z0-9_][A-Za-z0-9._/-]*");
@@ -82,41 +76,16 @@ final class GitLabArguments {
     private GitLabArguments() {
     }
 
-    /**
-     * The second line of defence behind the schema the starter enforces: the same pattern, read from the
-     * contract's {@code common.schema.json} instead of copied.
-     */
-    private static Pattern contractPattern(String definition) {
-        String resource = "/mcp-contracts/schemas/common.schema.json";
-        try (InputStream in = GitLabArguments.class.getResourceAsStream(resource)) {
-            if (in == null) {
-                throw new IllegalStateException(resource + " is missing: mcp-contracts must be on the classpath");
-            }
-            String pattern = JsonMapper.builder().build().readTree(in).path("$defs").path(definition)
-                    .path("pattern").asString(null);
-            if (pattern == null) {
-                throw new IllegalStateException(definition + " has no pattern in common.schema.json");
-            }
-            return Pattern.compile(pattern);
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
-        }
-    }
-
     static String group(String group) {
-        if (group == null || group.length() > PATH_MAX_LENGTH || !GROUP_PATH.matcher(group).matches()) {
-            throw new InvalidToolArgumentException("group must be a GitLab group path such as 'team-a' or "
-                    + "'team-a/sub': 1-20 segments of letters, digits, '.', '_' or '-' separated by '/', "
-                    + "at most 1024 characters");
+        if (!GitLabPaths.isGroup(group)) {
+            throw new InvalidToolArgumentException(GitLabPaths.GROUP_MESSAGE);
         }
         return group;
     }
 
     static String project(String project) {
-        if (project == null || project.length() > PATH_MAX_LENGTH || !PROJECT_PATH.matcher(project).matches()) {
-            throw new InvalidToolArgumentException("project must be a GitLab project path such as 'team-a/app': "
-                    + "group path and project name separated by '/', segments of letters, digits, '.', '_' or '-', "
-                    + "at most 1024 characters");
+        if (!GitLabPaths.isProject(project)) {
+            throw new InvalidToolArgumentException(GitLabPaths.PROJECT_MESSAGE);
         }
         return project;
     }

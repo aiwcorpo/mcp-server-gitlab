@@ -1,0 +1,17 @@
+[
+  {
+    "type": "GitLab::Group",
+    "attributes": ["path", "classification", "inheritedClassification"],
+    "idPattern": "^[A-Za-z0-9](?:[._/-][A-Za-z0-9]|[A-Za-z0-9])*$",
+    "scopePattern": "^[A-Za-z0-9](?:[._/-][A-Za-z0-9]|[A-Za-z0-9])*$",
+    "classification": {"attribute": "classification", "kind": "set", "required": false}
+  },
+  {
+    "type": "GitLab::Project",
+    "attributes": ["path", "classification", "inheritedClassification"],
+    "parent": "GitLab::Group",
+    "parentAttribute": "group",
+    "idPattern": "^[A-Za-z0-9](?:[._-][A-Za-z0-9]|[A-Za-z0-9])*/[A-Za-z0-9](?:[._/-][A-Za-z0-9]|[A-Za-z0-9])*$",
+    "classification": {"attribute": "classification", "kind": "set", "required": false}
+  }
+]

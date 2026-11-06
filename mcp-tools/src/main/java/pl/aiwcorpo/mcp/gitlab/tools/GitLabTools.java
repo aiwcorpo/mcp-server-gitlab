@@ -57,7 +57,7 @@ public class GitLabTools {
     @ToolTitle("List projects")
     public PagedResult<ProjectSummary> listProjects(
             @ToolParam(description = "Full path of the group, e.g. team-a or team-a/sub")
-            @ArgumentLimits(contractPattern = "GitLabGroupPath", minLength = 1)
+            @ArgumentLimits(resourceType = ResolvedResources.GROUP, minLength = 1)
             @ResourceRef(type = ResolvedResources.GROUP) String group,
             @ToolParam(description = CURSOR_PARAM, required = false)
             @ArgumentLimits(maxLength = CursorCodec.MAX_CURSOR_LENGTH, pattern = CursorCodec.ARGUMENT_PATTERN) String cursor) {
@@ -82,7 +82,7 @@ public class GitLabTools {
     @ToolTitle("Get file")
     public RepositoryFile getFile(
             @ToolParam(description = PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Path of the file relative to the repository root, e.g. src/main.py")
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.PATH_MAX_LENGTH) String path,

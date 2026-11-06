@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import pl.aiwcorpo.mcp.platform.security.BackendCredential;
 
 /**
- * The policy (C7) on groups and projects, with the sample bundle of the contracts. A resource is judged by what GitLab
+ * The policy (C7) on groups and projects, with the policies in {@code mcp/policies/}. A resource is judged by what GitLab
  * says about it and about every group above it, and every refusal looks like a resource that does not exist.
  */
 class ResourcePolicyTest extends ServerTestSupport {

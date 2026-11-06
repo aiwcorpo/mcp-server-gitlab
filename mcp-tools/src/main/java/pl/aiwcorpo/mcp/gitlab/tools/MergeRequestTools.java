@@ -53,7 +53,7 @@ public class MergeRequestTools {
     @ToolTitle("List merge requests")
     public PagedResult<MergeRequestSummary> listMergeRequests(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "opened, closed, merged or all; all states when omitted", required = false)
             @ArgumentLimits(maxLength = 10, pattern = GitLabArguments.MR_STATE_PATTERN) String state,
@@ -88,7 +88,7 @@ public class MergeRequestTools {
     @ToolTitle("Get merge request")
     public MergeRequest getMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid) {
@@ -102,7 +102,7 @@ public class MergeRequestTools {
     @ToolTitle("List merge request diffs")
     public PagedResult<FileDiff> listMergeRequestDiffs(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
@@ -124,7 +124,7 @@ public class MergeRequestTools {
     @ToolTitle("List merge request notes")
     public PagedResult<NoteView> listMergeRequestNotes(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
@@ -146,7 +146,7 @@ public class MergeRequestTools {
     @ToolTitle("Comment on merge request")
     public MergeRequestNote commentMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
@@ -164,7 +164,7 @@ public class MergeRequestTools {
     @ToolTitle("Create merge request")
     public MergeRequestChange createMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Branch with the changes")
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String sourceBranch,
@@ -188,7 +188,7 @@ public class MergeRequestTools {
     @ToolTitle("Update merge request")
     public MergeRequestChange updateMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
@@ -218,7 +218,7 @@ public class MergeRequestTools {
     @ToolTitle("Approve merge request")
     public ApprovalResult approveMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
@@ -238,7 +238,7 @@ public class MergeRequestTools {
     @ToolTitle("Merge a merge request")
     public MergeOutcome mergeMergeRequest(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,

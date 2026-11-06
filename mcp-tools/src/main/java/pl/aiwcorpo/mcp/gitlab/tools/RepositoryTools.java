@@ -41,7 +41,7 @@ public class RepositoryTools {
     @ToolTitle("Get project")
     public ProjectDetails getProject(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project) {
         return repository.getProject(ResolvedResources.project(GitLabArguments.project(project)));
     }
@@ -53,7 +53,7 @@ public class RepositoryTools {
     @ToolTitle("List repository tree")
     public PagedResult<TreeEntry> listRepositoryTree(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Directory relative to the repository root, e.g. src/main; the root when omitted",
                     required = false)
@@ -78,7 +78,7 @@ public class RepositoryTools {
     @ToolTitle("Search code")
     public PagedResult<CodeHit> searchCode(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Word or phrase to look for, plain text")
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.SEARCH_MAX_LENGTH) String query,
@@ -101,7 +101,7 @@ public class RepositoryTools {
     @ToolTitle("List branches")
     public PagedResult<Branch> listBranches(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Only branches whose name contains this text", required = false)
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String search,
@@ -121,7 +121,7 @@ public class RepositoryTools {
     @ToolTitle("List commits")
     public PagedResult<Commit> listCommits(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Branch, tag or commit SHA to list from; the default branch when omitted", required = false)
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String ref,
@@ -149,7 +149,7 @@ public class RepositoryTools {
     @ToolTitle("Get commit")
     public Commit getCommit(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Commit id in lower case hexadecimal, 7 to 40 characters")
             @ArgumentLimits(minLength = 7, maxLength = 40, pattern = GitLabArguments.COMMIT_PATTERN) String sha) {
@@ -163,7 +163,7 @@ public class RepositoryTools {
     @ToolTitle("Get commit diff")
     public PagedResult<FileDiff> getCommitDiff(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Commit id in lower case hexadecimal, 7 to 40 characters")
             @ArgumentLimits(minLength = 7, maxLength = 40, pattern = GitLabArguments.COMMIT_PATTERN) String sha,

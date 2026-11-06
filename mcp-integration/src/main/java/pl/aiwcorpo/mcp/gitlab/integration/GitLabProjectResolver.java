@@ -10,10 +10,12 @@ import org.springframework.stereotype.Component;
 import pl.aiwcorpo.mcp.cedar.entities.ResolvedResource;
 import pl.aiwcorpo.mcp.gitlab.core.domain.AncestorTopics;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
+import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabPaths;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProjectResource;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectPage;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
+import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
 import pl.aiwcorpo.mcp.platform.resource.ResourceResolver;
 
 /**
@@ -24,8 +26,7 @@ import pl.aiwcorpo.mcp.platform.resource.ResourceResolver;
 @Component
 public class GitLabProjectResolver implements ResourceResolver<GitLabProjectResource> {
 
-    static final String TYPE = "GitLab::Project";
-    static final String GROUP_TYPE = "GitLab::Group";
+    static final String TYPE = GitLabResourceDescription.PROJECT_TYPE;
 
     private final GitLabPort gitlab;
     GitLabProjectResolver(GitLabPort gitlab) {
@@ -37,8 +38,15 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
         return TYPE;
     }
 
+    /**
+     * The pattern of the declaration has already accepted the path; the depth and the reserved endings it cannot express are
+     * checked here, so a path GitLab cannot have is refused as an invalid argument without a request to GitLab.
+     */
     @Override
     public Optional<GitLabProjectResource> fetch(String path) {
+        if (!GitLabPaths.isProject(path)) {
+            throw new InvalidToolArgumentException(GitLabPaths.PROJECT_MESSAGE);
+        }
         return gitlab.findProject(path).map(GitLabProjectResolver::withAncestors);
     }
 
@@ -48,7 +56,8 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
      * as one under another path, is looked up on its own.
      */
     @Override
-    public Map<String, GitLabProjectResource> fetchAll(Collection<String> paths) {
+    public Map<String, GitLabProjectResource> fetchAll(Collection<String> allPaths) {
+        List<String> paths = allPaths.stream().filter(GitLabPaths::isProject).toList();
         Map<String, GitLabProject> listed = new LinkedHashMap<>();
         for (String parent : paths.stream().map(AncestorTopics::parentPath).distinct().toList()) {
             Optional<GitLabGroup> group = gitlab.findGroup(parent);
@@ -78,17 +87,11 @@ public class GitLabProjectResolver implements ResourceResolver<GitLabProjectReso
 
     @Override
     public ResolvedResource describe(GitLabProjectResource resource) {
-        String path = resource.project().pathWithNamespace();
-        String group = AncestorTopics.parentPath(path);
-        Map<String, Object> projectAttributes = new LinkedHashMap<>();
-        projectAttributes.put("path", path);
-        projectAttributes.put("classification", resource.project().topics());
-        projectAttributes.put("ancestorClassifications", resource.ancestorTopics().byPath());
-        Map<String, Object> groupAttributes = new LinkedHashMap<>();
-        groupAttributes.put("path", group);
-        groupAttributes.put("classification", resource.ancestorTopics().byPath().getOrDefault(group, List.of()));
-        groupAttributes.put("ancestorClassifications", resource.ancestorTopics().without(group).byPath());
-        return ResolvedResource.of(TYPE, path, projectAttributes)
-                .withParent(ResolvedResource.of(GROUP_TYPE, group, groupAttributes));
+        return GitLabResourceDescription.of(resource);
+    }
+
+    @Override
+    public Optional<ResolvedResource> probe(String path) {
+        return GitLabResourceDescription.probeOfProject(path);
     }
 }

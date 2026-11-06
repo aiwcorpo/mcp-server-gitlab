@@ -92,4 +92,16 @@ class ListProjectsToolTest extends ServerTestSupport {
         }
         assertThat(BACKEND.requests()).isEmpty();
     }
+
+    @Test
+    void aGroupBeyondTwentyLevelsOrEndingInGitOrAtomIsRefusedByTheServerBeforeGitLab() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            for (String group : new String[] {"g/".repeat(20) + "g", "team-a/sub.git", "team.atom/sub"}) {
+                assertInvalidArgument(call(client, "list_projects", Map.of("group", group)), "group must be a GitLab group path");
+            }
+            assertNotFoundOrDenied(call(client, "list_projects", Map.of("group", "g/".repeat(19) + "g")));
+        }
+        assertThat(BACKEND.requests()).as("only the deepest allowed path reaches GitLab, and it does not exist there")
+                .hasSize(1);
+    }
 }

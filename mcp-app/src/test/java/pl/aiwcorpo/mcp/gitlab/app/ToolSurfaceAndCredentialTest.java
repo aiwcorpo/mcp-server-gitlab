@@ -83,20 +83,20 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
     }
 
     @Test
-    void identifierPatternsInTheSchemaAreTheContractPatterns() throws java.io.IOException {
-        JsonNode defs;
-        try (java.io.InputStream in = getClass().getResourceAsStream("/mcp-contracts/schemas/common.schema.json")) {
-            defs = JsonMapper.builder().build().readTree(in).path("$defs");
+    void identifierPatternsInTheSchemaAreTheIdPatternsOfTheDeclaredTypes() throws java.io.IOException {
+        JsonMapper json = JsonMapper.builder().build();
+        Map<String, String> declared = new java.util.HashMap<>();
+        try (java.io.InputStream in = getClass().getResourceAsStream("/mcp/policies/resource-types.json")) {
+            json.readTree(in).forEach(type -> declared.put(type.path("type").asString(), type.path("idPattern").asString()));
         }
         try (McpSyncClient client = clientWithCredential(PAT)) {
             List<McpSchema.Tool> tools = client.listTools().tools();
-            JsonMapper json = JsonMapper.builder().build();
 
             assertThat(json.valueToTree(byName(tools, "list_projects").inputSchema()).at("/properties/group/pattern").asString())
-                    .isEqualTo(defs.path("GitLabGroupPath").path("pattern").asString());
+                    .isEqualTo(declared.get("GitLab::Group"));
             for (String tool : ToolCatalog.TOOLS.keySet().stream().filter(name -> !name.equals("list_projects")).toList()) {
                 assertThat(json.valueToTree(byName(tools, tool).inputSchema()).at("/properties/project/pattern").asString())
-                        .as(tool).isEqualTo(defs.path("GitLabProjectPath").path("pattern").asString());
+                        .as(tool).isEqualTo(declared.get("GitLab::Project"));
             }
         }
     }

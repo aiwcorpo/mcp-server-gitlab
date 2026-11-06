@@ -44,7 +44,7 @@ public class PipelineTools {
     @ToolTitle("List pipelines")
     public PagedResult<Pipeline> listPipelines(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Branch or tag the pipelines ran for", required = false)
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String ref,
@@ -66,7 +66,7 @@ public class PipelineTools {
     @ToolTitle("Get pipeline")
     public Pipeline getPipeline(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = PIPELINE_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.ID_MAX) Long pipelineId) {
@@ -81,7 +81,7 @@ public class PipelineTools {
     @ToolTitle("List pipeline jobs")
     public PagedResult<PipelineJob> listPipelineJobs(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = PIPELINE_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.ID_MAX) Long pipelineId,
@@ -103,7 +103,7 @@ public class PipelineTools {
     @ToolTitle("Get job log")
     public JobLog getJobLog(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Id of the job")
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.ID_MAX) Long jobId,
@@ -121,7 +121,7 @@ public class PipelineTools {
     @ToolTitle("Retry pipeline")
     public Pipeline retryPipeline(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = PIPELINE_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.ID_MAX) Long pipelineId) {
@@ -136,7 +136,7 @@ public class PipelineTools {
     @ToolTitle("Cancel pipeline")
     public Pipeline cancelPipeline(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = PIPELINE_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.ID_MAX) Long pipelineId) {

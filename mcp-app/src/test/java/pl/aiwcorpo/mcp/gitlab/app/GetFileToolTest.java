@@ -105,9 +105,14 @@ class GetFileToolTest extends ServerTestSupport {
     @Test
     void invalidArgumentsNeverReachGitLab() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
-            for (String project : new String[] {"app", "team-a/app.git", "team-a/../x", "42"}) {
+            for (String project : new String[] {"app", "team-a/../x", "42"}) {
                 assertInvalidArgument(call(client, "get_file", Map.of("project", project, "path", "README.md")),
                         "project does not match the required format");
+            }
+            // Shapes the idPattern accepts but GitLab cannot have (CC-237): the server refuses them itself.
+            for (String project : new String[] {"team-a/app.git", "team-a/app.atom", "team.git/app", "a/".repeat(21) + "b"}) {
+                assertInvalidArgument(call(client, "get_file", Map.of("project", project, "path", "README.md")),
+                        "project must be a GitLab project path");
             }
             for (String path : new String[] {"../../etc/passwd", "/etc/passwd", "a//b", "a/./b", "a%2F.."}) {
                 assertInvalidArgument(call(client, "get_file", Map.of("project", "team-a/app", "path", path)), "path must");
@@ -119,7 +124,7 @@ class GetFileToolTest extends ServerTestSupport {
                         "ref must be a branch, tag or commit SHA");
             }
         }
-        assertThat(BACKEND.requests()).as("only the resolver's lookups of the project and its group")
+        assertThat(BACKEND.requests()).as("nothing reaches GitLab for a path it cannot have, and no repository call at all")
                 .allSatisfy(seen -> assertThat(seen.rawPath()).doesNotContain("/repository/"));
     }
 }

@@ -1,0 +1,29 @@
+// Fragment of mcp-gitlab: one namespace, the server's own. Base types (User, ResourceScope, RequestContext) are
+// referenced unqualified from the empty namespace of cedar/mcp.cedarschema. Every entity type has `scopes`.
+
+namespace GitLab {
+  // `classification` is the topics of the group or project itself, normalized by the entity builder; absent when GitLab
+  // reports none. `inheritedClassification` is the union of the normalized topics of every ancestor group: topics are not
+  // inherited in GitLab, so a restricted group protects its subtree only through this attribute. The resolver computes
+  // it and refuses the resource when the ancestor data is incomplete, the builder does not know it.
+  entity Group {
+    path: String,
+    classification?: Set<String>,
+    inheritedClassification: Set<String>,
+    scopes: Set<ResourceScope>,
+  };
+  // `group` duplicates the parent edge because Cedar cannot read attributes of an ancestor through `in`.
+  entity Project in [Group] {
+    path: String,
+    group: Group,
+    classification?: Set<String>,
+    inheritedClassification: Set<String>,
+    scopes: Set<ResourceScope>,
+  };
+
+  action "read", "update", "delete", "admin" appliesTo {
+    principal: [User],
+    resource: [Group, Project],
+    context: RequestContext,
+  };
+}

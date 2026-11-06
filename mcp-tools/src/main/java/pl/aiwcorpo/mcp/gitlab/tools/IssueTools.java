@@ -43,7 +43,7 @@ public class IssueTools {
     @ToolTitle("List issues")
     public PagedResult<IssueSummary> listIssues(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "opened, closed or all; all states when omitted", required = false)
             @ArgumentLimits(maxLength = 10, pattern = GitLabArguments.ISSUE_STATE_PATTERN) String state,
@@ -75,7 +75,7 @@ public class IssueTools {
     @ToolTitle("Get issue")
     public Issue getIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid) {
@@ -89,7 +89,7 @@ public class IssueTools {
     @ToolTitle("List issue notes")
     public PagedResult<NoteView> listIssueNotes(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
@@ -110,7 +110,7 @@ public class IssueTools {
     @ToolTitle("Create issue")
     public IssueChange createIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = "Title, one line")
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.TITLE_MAX_LENGTH, mentionFiltered = true) String title,
@@ -132,7 +132,7 @@ public class IssueTools {
     @ToolTitle("Update issue")
     public IssueChange updateIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,
@@ -160,7 +160,7 @@ public class IssueTools {
     @ToolTitle("Comment on issue")
     public IssueNote commentIssue(
             @ToolParam(description = GitLabTools.PROJECT_PARAM)
-            @ArgumentLimits(contractPattern = "GitLabProjectPath", minLength = 3)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
             @ResourceRef(type = ResolvedResources.PROJECT) String project,
             @ToolParam(description = IID_PARAM)
             @ArgumentLimits(minimum = 1, maximum = GitLabArguments.IID_MAX) Long iid,

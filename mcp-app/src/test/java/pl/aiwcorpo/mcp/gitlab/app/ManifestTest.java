@@ -106,6 +106,23 @@ class ManifestTest extends ServerTestSupport {
     }
 
     @Test
+    void theManifestCarriesThePoliciesAndTheDeclarationsOfTheJarWithTheirHash() throws Exception {
+        JsonNode manifest = manifest();
+
+        assertThat(manifest.at("/policies/namespace").asString()).isEqualTo("GitLab");
+        assertThat(manifest.at("/policies/files").findValuesAsString("name"))
+                .containsExactly("read.cedar", "restricted.cedar", "update.cedar");
+        assertThat(manifest.get("policiesHash").asString()).startsWith("sha256:");
+        List<String> declared = new ArrayList<>();
+        manifest.get("resourceTypes").forEach(type -> declared.add(type.get("type").asString()));
+        assertThat(declared).containsExactlyInAnyOrder("GitLab::Group", "GitLab::Project");
+        JsonNode project = manifest.get("resourceTypes").valueStream()
+                .filter(type -> "GitLab::Project".equals(type.get("type").asString())).findFirst().orElseThrow();
+        assertThat(project.get("parent").asString()).isEqualTo("GitLab::Group");
+        assertThat(project.get("parentAttribute").asString()).isEqualTo("group");
+    }
+
+    @Test
     void theManifestPassesTheRulesOfTheGateway() throws Exception {
         JsonNode manifest = manifest();
 

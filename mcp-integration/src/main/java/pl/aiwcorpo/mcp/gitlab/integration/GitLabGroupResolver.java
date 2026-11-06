@@ -1,13 +1,12 @@
 package pl.aiwcorpo.mcp.gitlab.integration;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 import pl.aiwcorpo.mcp.cedar.entities.ResolvedResource;
-import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroupResource;
+import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabPaths;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
+import pl.aiwcorpo.mcp.platform.error.InvalidToolArgumentException;
 import pl.aiwcorpo.mcp.platform.resource.ResourceResolver;
 
 /**
@@ -18,9 +17,10 @@ import pl.aiwcorpo.mcp.platform.resource.ResourceResolver;
 @Component
 public class GitLabGroupResolver implements ResourceResolver<GitLabGroupResource> {
 
-    static final String TYPE = "GitLab::Group";
+    static final String TYPE = GitLabResourceDescription.GROUP_TYPE;
 
     private final GitLabPort gitlab;
+
     GitLabGroupResolver(GitLabPort gitlab) {
         this.gitlab = gitlab;
     }
@@ -30,17 +30,25 @@ public class GitLabGroupResolver implements ResourceResolver<GitLabGroupResource
         return TYPE;
     }
 
+    /**
+     * The pattern of the declaration has already accepted the path; the depth and the reserved endings it cannot express are
+     * checked here, so a path GitLab cannot have is refused as an invalid argument without a request to GitLab.
+     */
     @Override
     public Optional<GitLabGroupResource> fetch(String path) {
+        if (!GitLabPaths.isGroup(path)) {
+            throw new InvalidToolArgumentException(GitLabPaths.GROUP_MESSAGE);
+        }
         return gitlab.findGroup(path).map(group -> new GitLabGroupResource(group, AncestorLookup.above(group.fullPath())));
     }
 
     @Override
     public ResolvedResource describe(GitLabGroupResource resource) {
-        Map<String, Object> attributes = new LinkedHashMap<>();
-        attributes.put("path", resource.group().fullPath());
-        attributes.put("classification", resource.group().topics());
-        attributes.put("ancestorClassifications", resource.ancestorTopics().byPath());
-        return ResolvedResource.of(TYPE, resource.group().fullPath(), attributes);
+        return GitLabResourceDescription.of(resource);
+    }
+
+    @Override
+    public Optional<ResolvedResource> probe(String path) {
+        return GitLabResourceDescription.probeOfGroup(path);
     }
 }
