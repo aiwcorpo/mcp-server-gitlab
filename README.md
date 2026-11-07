@@ -47,13 +47,11 @@ JDK 25 is required (`JAVA_HOME` must point to it; on macOS `/usr/libexec/java_ho
 ```bash
 export JAVA_HOME=/path/to/jdk-25
 ./mvnw verify      # build and tests, jar in mcp-app/target/mcp-gitlab.jar
-make ci            # ci/run.sh verify: source hygiene, mvnw clean verify, check that every test module ran
 ```
 
 The tests need neither Docker nor a GitLab. `TestGateway` from `mcp-platform-test` publishes a JWKS made from the contract test
-keys and signs internal JWTs, and `StubBackend` imitates the API. `make ci` also leaves the manifest in
-`mcp-app/target/mcp-manifest.json`; register it in the gateway and approve new `UPDATE` tools there. `ci/run.sh image` builds the
-container image (`Dockerfile`, `eclipse-temurin:25-jre`, port 8443) from `main` only and needs a Docker daemon.
+keys and signs internal JWTs, and `StubBackend` imitates the API. `./mvnw verify` also leaves the manifest in
+`mcp-app/target/mcp-manifest.json`; register it in the gateway and approve new `UPDATE` tools there. `docker build -t mcp-gitlab:dev .` builds the container image (`Dockerfile`, `eclipse-temurin:25-jre`, port 8443) from that jar and needs a Docker daemon. The GitHub, GitLab and Jenkins files run `./mvnw -B verify`.
 
 ## Policies
 
