@@ -1,7 +1,7 @@
 # systemd unit: /etc/systemd/system/mcp-gitlab.service
 #   systemctl daemon-reload && systemctl enable --now mcp-gitlab
 [Unit]
-Description=MCP server mcp-gitlab (behind the MCP gateway, mTLS)
+Description=MCP server mcp-gitlab (behind the MCP gateway)
 After=network-online.target
 Wants=network-online.target
 
@@ -9,7 +9,9 @@ Wants=network-online.target
 Type=simple
 User=mcp
 Group=mcp
-# Secrets and addresses (mcp-gitlab.env.template); logs go to journald.
+# Secrets and addresses (mcp-gitlab.env.template); logs go to journald (the fingerprint of the certificate is in the first lines).
+# /var/lib/mcp-gitlab holds the generated certificate and the cursor key between starts.
+StateDirectory=mcp-gitlab
 EnvironmentFile=/etc/mcp-gitlab/mcp-gitlab.env
 ExecStart=/usr/bin/java -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError -jar /opt/mcp-gitlab/mcp-gitlab.jar
 
