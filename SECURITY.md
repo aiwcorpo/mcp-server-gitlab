@@ -18,7 +18,7 @@ In scope: the code in this repository (tools, the GitLab adapters, resolvers, th
 
 Out of scope:
 
-- The `dev` profile relaxes TLS, mTLS and the replay store by design; it listens on the loopback address only and
+- The `dev` profile relaxes TLS and the replay store by design; it listens on the loopback address only and
   is refused in a container, a Kubernetes pod and under systemd.
 - The gateway, the credential broker, the policies and the starter are separate repositories.
 - GitLab itself, and the permissions of the account whose token the user connects.

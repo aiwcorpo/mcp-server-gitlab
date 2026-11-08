@@ -51,7 +51,7 @@ export JAVA_HOME=/path/to/jdk-25
 
 The tests need neither Docker nor a GitLab. `TestGateway` from `mcp-platform-test` publishes a JWKS made from the contract test
 keys and signs internal JWTs, and `StubBackend` imitates the API. `./mvnw verify` also leaves the manifest in
-`mcp-app/target/mcp-manifest.json`; register it in the gateway and approve new `UPDATE` tools there. `docker build -t mcp-gitlab:dev .` builds the container image (`Dockerfile`, `eclipse-temurin:25-jre`, port 8443) from that jar and needs a Docker daemon. The GitHub, GitLab and Jenkins files run `./mvnw -B verify`.
+`mcp-app/target/mcp-manifest.json`; it is the document the running server serves at `/.well-known/mcp-manifest` for the gateway to pull, and an administrator approves every new or changed tool there. `docker build -t mcp-gitlab:dev .` builds the container image (`Dockerfile`, `eclipse-temurin:25-jre`, port 8443) from that jar and needs a Docker daemon. The GitHub, GitLab and Jenkins files run `./mvnw -B verify`.
 
 ## Policies
 
@@ -78,7 +78,7 @@ segments, a project path 21) and no segment ends in `.git` or `.atom`. A path th
 
 ## Running against a real GitLab
 
-`.run/` has two IntelliJ configurations. Start `LocalGateway` (the gateway of `mcp-platform-test`, serving the JWKS and the policy data
+`.run/` has two IntelliJ configurations. Start `LocalGateway` (the gateway of `mcp-platform-test`, serving the JWKS and pushing the policy data to the server
 on port 18445 with the policies of this working tree and the mapping in `.run/scope-mapping.json`), then
 `McpGitlab (dev, behind LocalGateway)` with `MCP_GITLAB_URL` set to your GitLab. Edit the mapping and the `--groups` of the `LocalGateway`
 configuration for your group paths, and restart `LocalGateway` after a change to the policies (it approves the hash of the files it
@@ -91,16 +91,15 @@ server does not start without these:
 
 | Variable | Meaning |
 | --- | --- |
-| `MCP_TLS_KEYSTORE`, `MCP_TLS_TRUSTSTORE`, `MCP_TLS_STORE_PASSWORD` | PKCS12 server certificate and the internal CA |
-| `MCP_GATEWAY_JWKS_URI` | JWKS of the gateway's internal JWT, `https` only |
+| `MCP_GATEWAY_JWKS_URI` | public key set of the gateway's internal JWT: `https://<domain of the platform>/.well-known/mcp-jwks.json` |
 | `MCP_CONNECT_URL` | portal page where a user connects an account; returned in `credential_required` |
 | `MCP_GITLAB_URL` | address of the GitLab instance without `/api/v4`; `https` only |
-| `MCP_GATEWAY_POLICY_DATA_URL` | policy data of the gateway (`/internal/v1/policy-data`), `https` only, fetched with this server's own certificate |
-| `MCP_INTERNAL_URL`, `MCP_ACCEPTED_CREDENTIAL_TYPES` | server address and accepted credential types for the manifest (`user-oauth,user-secret`; the first is the default) |
+| `MCP_ACCEPTED_CREDENTIAL_TYPES` | accepted credential types for the manifest (`user-oauth,user-secret`; the first is the default) |
 
-Also used: `MCP_GATEWAY_TLS_NAME` (only when the host of the policy data URL is not a name in the gateway certificate), `MCP_GITLAB_SSL_BUNDLE` (SSL bundle for a GitLab with an internal CA), `MCP_PAGING_CURSOR_KEY` (Base64, at least 32
-bytes, the same on every instance; `openssl rand -base64 32`), `MCP_REDIS_*` (one-time `jti` store, ACL user `mcp-gitlab`) and
-`MCP_PORT`/`MCP_BIND` (default `8443`, `0.0.0.0`). Size limits: `MCP_GITLAB_FILE_MAX_BYTES` (default 262144, at most 400 KiB),
+Also used: `MCP_GITLAB_SSL_BUNDLE` (SSL bundle for a GitLab with an internal CA), `MCP_PAGING_CURSOR_KEY` (Base64, at least 32
+bytes, optional for one instance (kept in the state directory), required and the same on every instance for several; `openssl rand -base64 32`), `MCP_TLS_CERT` and `MCP_TLS_KEY`, or `MCP_TLS_KEYSTORE` with `MCP_TLS_STORE_PASSWORD` (your own certificate; without them the server generates a
+self-signed one into `MCP_STATE_DIR`, and `MCP_PLAIN_HTTP=true` means no TLS inside the platform network), `MCP_REDIS_HOST` and the other `MCP_REDIS_*`
+(one-time `jti` in Redis instead of memory: for several instances behind a balancer, which also need the same `MCP_PAGING_CURSOR_KEY`) and `MCP_PORT`/`MCP_BIND` (default `8443`, `0.0.0.0`). Size limits: `MCP_GITLAB_FILE_MAX_BYTES` (default 262144, at most 400 KiB),
 `MCP_GITLAB_MAX_JSON_SIZE` and `MCP_GITLAB_MAX_LOG_SIZE` (8MB each). `MCP_GITLAB_ALLOW_PLAIN_HTTP=true` allows `http` and exists
 only for the mocks of the development stack. The full list with defaults is in `docs/reference/env-servers.md` of `mcp-docs`.
 
