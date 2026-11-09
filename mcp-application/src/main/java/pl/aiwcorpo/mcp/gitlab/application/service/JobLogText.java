@@ -70,7 +70,15 @@ final class JobLogText {
     static Cleaned clean(String raw) {
         String window = raw.length() > WINDOW_CHARS ? raw.substring(raw.length() - WINDOW_CHARS) : raw;
         String text = SECTION_MARKER.matcher(ANSI.matcher(window).replaceAll("")).replaceAll("");
-        text = TextHygiene.normalize(text);
+        return redact(text);
+    }
+
+    /**
+     * The masking of {@link #clean} without the log-only steps (window, escape codes, section markers): for a file whose
+     * bytes are the author's, such as an artifact, where only credentials by shape are replaced.
+     */
+    static Cleaned redact(String raw) {
+        String text = TextHygiene.normalize(raw);
         int[] redactions = {0};
         text = redactPrivateKeys(text, redactions);
         text = redactUserinfo(text, redactions);

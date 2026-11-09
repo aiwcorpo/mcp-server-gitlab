@@ -137,6 +137,16 @@ class GitLabResolversTest {
         }
 
         @Override
+        public Optional<byte[]> jobArtifact(long projectId, long jobId, String artifactPath) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser> currentUser() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Optional<FileMetadata> fileMetadata(long projectId, String filePath, String ref) {
             throw new UnsupportedOperationException();
         }

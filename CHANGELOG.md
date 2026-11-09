@@ -36,7 +36,7 @@ Major release: the policies of the server live in this repository. Built on `mcp
 - Seven more tools (37 in all). Reads of a project: `list_tags`, `list_releases` (the description as untrusted Markdown, asset link names without
   their URLs), `list_project_members` (including inherited members, no e-mail addresses), `list_labels` (with the counts of open issues and merge
   requests and an optional search text) and `get_job_artifact_file` (one UTF-8 text file from the artifacts of a job of the project, with the size
-  limit and the binary refusal of `get_file`; the file is not scanned for credentials). `get_current_user` returns id, username, name and state of the
+  limit and the binary refusal of `get_file`; strings shaped like credentials are replaced by `[redacted]` as in `get_job_log`, with a count). `get_current_user` returns id, username, name and state of the
   GitLab user behind the credential; it names no resource, so only the read group of the system gates it. One write, `create_branch` (`UPDATE`,
   from a branch, tag or commit; the name is checked before GitLab, an existing branch is refused with the fixed text of a rejected change).
 

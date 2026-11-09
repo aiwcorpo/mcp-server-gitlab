@@ -9,7 +9,8 @@ import pl.aiwcorpo.mcp.platform.text.UntrustedText;
  * @param path    path of the file inside the artifacts
  * @param size    size in bytes
  * @param hiddenCharactersRemoved as in {@link RepositoryFile}
+ * @param redactions how many strings shaped like credentials were replaced by {@code [redacted]}, as in {@link JobLog}
  */
 public record ArtifactFile(String project, long jobId, String path, long size, int hiddenCharactersRemoved,
-        UntrustedText content) {
+        int redactions, UntrustedText content) {
 }

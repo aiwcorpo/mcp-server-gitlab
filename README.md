@@ -34,7 +34,7 @@ and required group is in `docs/reference/tools.md` of the `mcp-docs` repository 
 Reads cover group projects, files, repository trees, code search, branches, tags, releases, commits and diffs, merge requests with
 their diffs and notes, issues and notes, labels, project members, pipelines, jobs, job logs and single files from job artifacts, and
 the user behind the credential (`get_current_user`, the one tool that names no group or project: it needs only the read group).
-Writes cover merge request comments, creation, update, approval and merge, issue creation, update and comments, branch creation,
+Strings shaped like credentials in an artifact file are replaced by `[redacted]`, as in a job log. Writes cover merge request comments, creation, update, approval and merge, issue creation, update and comments, branch creation,
 and pipeline retry and cancel. Merge and approval are `UPDATE`, so the write
 group is enough and no confirmation code is asked.
 

@@ -42,6 +42,17 @@ class JobArtifactFileToolTest extends ServerTestSupport {
     }
 
     @Test
+    void valuesGitLabWouldMaskInTheLogAreMaskedInTheFileToo() {
+        try (McpSyncClient client = clientWithCredential(PAT)) {
+            McpSchema.CallToolResult result = call(client, "get_job_artifact_file", artifact(501, "config/app.env"));
+
+            assertThat(result.isError()).as(text(result)).isFalse();
+            assertThat(text(result)).contains("\"redactions\":3", "TOKEN=[redacted]", "DB_PASSWORD=[redacted]", "KEEP=1")
+                    .doesNotContain("hunter2", "glpat-");
+        }
+    }
+
+    @Test
     void binaryAndOversizedFilesAreRefusedWithoutContent() {
         try (McpSyncClient client = clientWithCredential(PAT)) {
             McpSchema.CallToolResult binary = call(client, "get_job_artifact_file", artifact(501, "build/app.bin"));

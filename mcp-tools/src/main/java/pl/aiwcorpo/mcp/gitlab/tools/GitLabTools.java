@@ -97,8 +97,9 @@ public class GitLabTools {
 
     @Tool(name = "get_job_artifact_file", description = "Returns one UTF-8 text file from the artifacts of a CI job: "
             + "project path, job id, file path inside the artifacts, size in bytes and the content. Binary files, files "
-            + "over the size limit and jobs without that artifact are refused or not found; the content is not "
-            + "scanned for credentials.")
+            + "over the size limit and jobs without that artifact are refused or not found. Strings that look like "
+            + "credentials (GitLab tokens, bearer tokens, passwords in URLs, key=value pairs of passwords and secrets, private "
+            + "keys) are replaced by [redacted]; redactions is their count.")
     @ToolRisk(RiskLevel.READ_ONLY)
     @ToolTitle("Get job artifact file")
     public ArtifactFile getJobArtifactFile(

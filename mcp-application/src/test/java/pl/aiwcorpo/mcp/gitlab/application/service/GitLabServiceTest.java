@@ -87,6 +87,7 @@ class GitLabServiceTest {
         assertThat(file.size()).isEqualTo(5);
         assertThat(file.content().text()).isEqualTo("hello");
         assertThat(file.content().kind()).isEqualTo("untrusted-data");
+        assertThat(file.redactions()).isZero();
         assertThat(gitlab.artifactsRead).containsExactly("42/5/reports/ok.txt");
         for (String path : new String[] {"reports/big.txt", "reports/unbounded.txt"}) {
             assertThatThrownBy(() -> service.getJobArtifactFile(APP, 5, path))
@@ -94,6 +95,15 @@ class GitLabServiceTest {
                     .extracting(ex -> ((FileNotReturnedException) ex).reason())
                     .isEqualTo(FileNotReturnedException.Reason.TOO_LARGE);
         }
+    }
+
+    @Test
+    void credentialsInAnArtifactAreMaskedLikeInALog() {
+        var file = new GitLabService(gitlab, 1024).getJobArtifactFile(APP, 5, "reports/secrets.env");
+
+        assertThat(file.redactions()).isEqualTo(2);
+        assertThat(file.content().text()).contains("DB_PASSWORD=[redacted]", "postgres://[redacted]@db/app", "KEEP=1")
+                .doesNotContain("hunter2", "s3cr3t");
     }
 
     @Test
@@ -180,6 +190,8 @@ class GitLabServiceTest {
                 case "reports/none.txt" -> Optional.empty();
                 case "reports/big.txt" -> Optional.of("x".repeat(17).getBytes(StandardCharsets.UTF_8));
                 case "reports/unbounded.txt" -> throw new BackendRefusedException(BackendRefusedException.Reason.RESPONSE_TOO_LARGE);
+                case "reports/secrets.env" -> Optional.of(("DB_PASSWORD=hunter2\nurl=postgres://app:s3cr3t@db/app\nKEEP=1\n")
+                        .getBytes(StandardCharsets.UTF_8));
                 case "reports/nul.bin" -> Optional.of(new byte[] {'a', 0, 'b'});
                 default -> Optional.of("hello".getBytes(StandardCharsets.UTF_8));
             };

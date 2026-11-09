@@ -99,9 +99,10 @@ public class GitLabService implements GitLabUseCase {
             throw new FileNotReturnedException(FileNotReturnedException.Reason.TOO_LARGE, maxFileBytes);
         }
         String text = utf8Text(bytes);
+        JobLogText.Cleaned masked = JobLogText.redact(text);
         return new ArtifactFile(project.pathWithNamespace(), jobId, artifactPath, bytes.length,
-                SystemText.hiddenCharacters(text),
-                SystemText.plainOrEmpty(text, (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
+                SystemText.hiddenCharacters(text), masked.redactions(),
+                SystemText.plainOrEmpty(masked.text(), (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
     }
 
     @Override
