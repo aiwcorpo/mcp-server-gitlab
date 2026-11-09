@@ -7,7 +7,11 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.Branch;
 import pl.aiwcorpo.mcp.gitlab.core.domain.CodeHit;
 import pl.aiwcorpo.mcp.gitlab.core.domain.Commit;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileDiff;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Label;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectDetails;
+import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectMember;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Release;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Tag;
 import pl.aiwcorpo.mcp.gitlab.core.domain.TreeEntry;
 
 /**
@@ -24,6 +28,17 @@ public interface RepositoryPort {
     Optional<BackendPage<CodeHit>> searchCode(long projectId, String term, @Nullable String ref, int page);
 
     Optional<BackendPage<Branch>> branches(long projectId, @Nullable String search, int page);
+
+    Optional<BackendPage<Tag>> tags(long projectId, @Nullable String search, int page);
+
+    Optional<BackendPage<Release>> releases(long projectId, int page);
+
+    Optional<BackendPage<ProjectMember>> members(long projectId, int page);
+
+    Optional<BackendPage<Label>> labels(long projectId, @Nullable String search, int page);
+
+    /** Empty when GitLab does not show the project to the caller; an existing branch is a {@code BackendRefusedException}. */
+    Optional<Branch> createBranch(long projectId, String branch, String ref);
 
     Optional<BackendPage<Commit>> commits(long projectId, @Nullable String ref, @Nullable String path,
             @Nullable String since, @Nullable String until, int page);

@@ -161,9 +161,13 @@ class ManifestTest extends ServerTestSupport {
         for (JsonNode tool : tools) {
             String name = tool.get("name").asString();
             ToolCatalog.Entry expected = ToolCatalog.TOOLS.get(name);
-            assertThat(tool.get("resourceRefs")).as(name).hasSize(1);
-            assertThat(tool.at("/resourceRefs/0/argument").asString()).as(name).isEqualTo(expected.argument());
-            assertThat(tool.at("/resourceRefs/0/type").asString()).as(name).isEqualTo(expected.type());
+            if (expected.argument() == null) {
+                assertThat(tool.get("resourceRefs")).as(name + " takes no resource").isEmpty();
+            } else {
+                assertThat(tool.get("resourceRefs")).as(name).hasSize(1);
+                assertThat(tool.at("/resourceRefs/0/argument").asString()).as(name).isEqualTo(expected.argument());
+                assertThat(tool.at("/resourceRefs/0/type").asString()).as(name).isEqualTo(expected.type());
+            }
             assertThat(tool.get("risk").asString()).as(name).isEqualTo(expected.risk());
             assertThat(tool.get("action").asString()).as(name).isEqualTo(expected.risk().equals("UPDATE") ? "update" : "read");
         }

@@ -7,8 +7,12 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.CodeHit;
 import pl.aiwcorpo.mcp.gitlab.core.domain.Commit;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileDiff;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Label;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectDetails;
+import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectMember;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Release;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ResourceNotFoundException;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Tag;
 import pl.aiwcorpo.mcp.gitlab.core.domain.TreeEntry;
 import pl.aiwcorpo.mcp.gitlab.core.port.in.RepositoryUseCase;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.RepositoryPort;
@@ -40,6 +44,31 @@ public class RepositoryService implements RepositoryUseCase {
     @Override
     public BackendPage<Branch> branches(GitLabProject project, @Nullable String search, int page) {
         return repository.branches(project.id(), search, page).orElseThrow(ResourceNotFoundException::new);
+    }
+
+    @Override
+    public BackendPage<Tag> tags(GitLabProject project, @Nullable String search, int page) {
+        return repository.tags(project.id(), search, page).orElseThrow(ResourceNotFoundException::new);
+    }
+
+    @Override
+    public BackendPage<Release> releases(GitLabProject project, int page) {
+        return repository.releases(project.id(), page).orElseThrow(ResourceNotFoundException::new);
+    }
+
+    @Override
+    public BackendPage<ProjectMember> members(GitLabProject project, int page) {
+        return repository.members(project.id(), page).orElseThrow(ResourceNotFoundException::new);
+    }
+
+    @Override
+    public BackendPage<Label> labels(GitLabProject project, @Nullable String search, int page) {
+        return repository.labels(project.id(), search, page).orElseThrow(ResourceNotFoundException::new);
+    }
+
+    @Override
+    public Branch createBranch(GitLabProject project, String branch, String ref) {
+        return repository.createBranch(project.id(), branch, ref).orElseThrow(ResourceNotFoundException::new);
     }
 
     @Override

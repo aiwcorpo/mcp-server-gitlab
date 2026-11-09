@@ -6,7 +6,10 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import pl.aiwcorpo.mcp.gitlab.core.domain.ArtifactFile;
 import pl.aiwcorpo.mcp.gitlab.core.domain.BackendPage;
+import pl.aiwcorpo.mcp.gitlab.core.domain.BackendRefusedException;
+import pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileMetadata;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileNotReturnedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FoundMergeRequest;
@@ -79,6 +82,31 @@ public class GitLabService implements GitLabUseCase {
                 metadata.commitId(),
                 bytes.length, SystemText.hiddenCharacters(text),
                 SystemText.plainOrEmpty(text, (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
+    }
+
+    @Override
+    public ArtifactFile getJobArtifactFile(GitLabProject project, long jobId, String artifactPath) {
+        byte[] bytes;
+        try {
+            bytes = gitlab.jobArtifact(project.id(), jobId, artifactPath).orElseThrow(ResourceNotFoundException::new);
+        } catch (BackendRefusedException refused) {
+            if (refused.reason() == BackendRefusedException.Reason.RESPONSE_TOO_LARGE) {
+                throw new FileNotReturnedException(FileNotReturnedException.Reason.TOO_LARGE, maxFileBytes);
+            }
+            throw refused;
+        }
+        if (bytes.length > maxFileBytes) {
+            throw new FileNotReturnedException(FileNotReturnedException.Reason.TOO_LARGE, maxFileBytes);
+        }
+        String text = utf8Text(bytes);
+        return new ArtifactFile(project.pathWithNamespace(), jobId, artifactPath, bytes.length,
+                SystemText.hiddenCharacters(text),
+                SystemText.plainOrEmpty(text, (int) Math.min(maxFileBytes, Integer.MAX_VALUE)));
+    }
+
+    @Override
+    public CurrentUser currentUser() {
+        return gitlab.currentUser().orElseThrow(ResourceNotFoundException::new);
     }
 
     @Override

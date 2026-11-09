@@ -25,7 +25,8 @@ public class GitLabToolErrors implements ToolErrorMapping {
                 case CONFLICT -> "GitLab refused the change because it conflicts with the current state of the "
                         + "project, for example the head commit moved or an open merge request for these branches exists.";
                 case REJECTED -> "GitLab refused the change: it is not valid in the current state of the project, for "
-                        + "example a draft, a missing branch or an unresolved blocker.";
+                        + "example a draft, a missing or already existing branch or an unresolved blocker.";
+                case RESPONSE_TOO_LARGE -> "GitLab's answer is larger than the server reads.";
                 case LOG_TOO_LARGE -> "The job log is larger than the server reads; its end is not returned.";
                 case UNCONFIRMED -> "The change may have been saved, but GitLab's answer could not be confirmed for this "
                         + "project. Check the current state before repeating it.";

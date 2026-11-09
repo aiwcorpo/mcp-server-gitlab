@@ -3,6 +3,8 @@ package pl.aiwcorpo.mcp.gitlab.tools;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
+import pl.aiwcorpo.mcp.gitlab.core.domain.ArtifactFile;
+import pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectSummary;
 import pl.aiwcorpo.mcp.gitlab.core.domain.RepositoryFile;
@@ -91,5 +93,31 @@ public class GitLabTools {
             @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String ref) {
         return gitlab.getFile(ResolvedResources.project(GitLabArguments.project(project)),
                 GitLabArguments.filePath(path), GitLabArguments.ref(ref));
+    }
+
+    @Tool(name = "get_job_artifact_file", description = "Returns one UTF-8 text file from the artifacts of a CI job: "
+            + "project path, job id, file path inside the artifacts, size in bytes and the content. Binary files, files "
+            + "over the size limit and jobs without that artifact are refused or not found; the content is not "
+            + "scanned for credentials.")
+    @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("Get job artifact file")
+    public ArtifactFile getJobArtifactFile(
+            @ToolParam(description = PROJECT_PARAM)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
+            @ResourceRef(type = ResolvedResources.PROJECT) String project,
+            @ToolParam(description = "Id of the job")
+            @ArgumentLimits(minimum = 1, maximum = GitLabArguments.ID_MAX) Long jobId,
+            @ToolParam(description = "Path of the file inside the artifacts, e.g. reports/junit.xml")
+            @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.PATH_MAX_LENGTH) String artifactPath) {
+        return gitlab.getJobArtifactFile(ResolvedResources.project(GitLabArguments.project(project)),
+                GitLabArguments.id(jobId, "jobId"), GitLabArguments.filePath(artifactPath));
+    }
+
+    @Tool(name = "get_current_user", description = "Returns the GitLab user the caller's credential belongs to: id, "
+            + "username, name and state. Not tied to a project or group; no e-mail address.")
+    @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("Get current user")
+    public CurrentUser getCurrentUser() {
+        return gitlab.currentUser();
     }
 }

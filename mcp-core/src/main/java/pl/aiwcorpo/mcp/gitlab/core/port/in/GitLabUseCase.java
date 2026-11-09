@@ -1,6 +1,8 @@
 package pl.aiwcorpo.mcp.gitlab.core.port.in;
 
+import pl.aiwcorpo.mcp.gitlab.core.domain.ArtifactFile;
 import pl.aiwcorpo.mcp.gitlab.core.domain.BackendPage;
+import pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequest;
@@ -21,6 +23,12 @@ public interface GitLabUseCase {
 
     /** @param ref branch, tag or commit; {@code null} for the default branch */
     RepositoryFile getFile(GitLabProject project, String filePath, String ref);
+
+    /** A UTF-8 text file from the artifacts of a job of the project; binary and oversized files are refused. */
+    ArtifactFile getJobArtifactFile(GitLabProject project, long jobId, String artifactPath);
+
+    /** The user the caller's credential belongs to; instance-wide, not tied to a group or project. */
+    CurrentUser currentUser();
 
     MergeRequest getMergeRequest(GitLabProject project, long iid);
 

@@ -23,6 +23,21 @@ class GitLabArgumentsTest {
     }
 
     @Test
+    void branchNamesFollowTheRulesGitAppliesAndFilterTextIsOptional() {
+        for (String valid : new String[] {"main", "feature/retry-policy", "release/1.4", "fix_1", "a.b"}) {
+            assertThat(GitLabArguments.branchName(valid)).isEqualTo(valid);
+        }
+        for (String invalid : new String[] {null, "", "a b", "a..b", "-x", "/x", ".x", "x/", "x.", "x.lock", "a//b", "a~1", "a:b",
+                "a^b", "a?b", "a*b", "a[b", "a\\b", "a@{1}", "HEAD", "x".repeat(256)}) {
+            assertThatThrownBy(() -> GitLabArguments.branchName(invalid)).as(String.valueOf(invalid))
+                    .isInstanceOf(InvalidToolArgumentException.class);
+        }
+        assertThat(GitLabArguments.filterText(null)).isNull();
+        assertThat(GitLabArguments.filterText("back")).isEqualTo("back");
+        assertThatThrownBy(() -> GitLabArguments.filterText(" ")).isInstanceOf(InvalidToolArgumentException.class);
+    }
+
+    @Test
     void groupFollowsTheContractVectors() throws IOException {
         checkVectors("mcp-contracts/test-vectors/resource-ids/gitlab-group.json", GitLabArguments::group);
         assertThatThrownBy(() -> GitLabArguments.group("a/".repeat(20) + "b")).isInstanceOf(InvalidToolArgumentException.class);

@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import pl.aiwcorpo.mcp.gitlab.core.domain.BackendPage;
+import pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileMetadata;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FoundMergeRequest;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
@@ -16,7 +17,9 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequestNote;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectPage;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
+import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.CurrentUserResponse;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.GroupResponse;
+import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.JobResponse;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.MergeRequestResponse;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.NoteResponse;
 import pl.aiwcorpo.mcp.gitlab.integration.GitLabResponses.ProjectResponse;
@@ -106,6 +109,32 @@ public class GitLabRestAdapter implements GitLabPort {
     public Optional<byte[]> fileContent(long projectId, String filePath, String commitId) {
         return http.getBytes(new GitLabQuery("/projects/{id}/repository/files/{path}/raw").with("id", projectId)
                 .with("path", filePath).param("ref", commitId));
+    }
+
+    @Override
+    public Optional<byte[]> jobArtifact(long projectId, long jobId, String artifactPath) {
+        // As for a log: the file is read only for a job whose own record names a pipeline of this project.
+        Optional<JobResponse> job = http.get(JobResponse.class,
+                new GitLabQuery("/projects/{id}/jobs/{jid}").with("id", projectId).with("jid", jobId));
+        if (job.isEmpty() || !job.get().belongsTo(projectId)) {
+            return Optional.empty();
+        }
+        // The artifact path is a glob in GitLab's route: its slashes are separators, so each segment is encoded alone.
+        String[] segments = artifactPath.split("/");
+        StringBuilder template = new StringBuilder("/projects/{id}/jobs/{jid}/artifacts");
+        for (int i = 0; i < segments.length; i++) {
+            template.append("/{s").append(i).append('}');
+        }
+        GitLabQuery artifact = new GitLabQuery(template.toString()).with("id", projectId).with("jid", jobId);
+        for (int i = 0; i < segments.length; i++) {
+            artifact.with("s" + i, segments[i]);
+        }
+        return http.getArtifact(artifact);
+    }
+
+    @Override
+    public Optional<CurrentUser> currentUser() {
+        return http.get(CurrentUserResponse.class, new GitLabQuery("/user")).map(CurrentUserResponse::toDomain);
     }
 
     @Override

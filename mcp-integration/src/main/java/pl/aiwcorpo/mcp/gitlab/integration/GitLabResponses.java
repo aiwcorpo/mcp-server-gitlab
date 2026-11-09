@@ -10,12 +10,14 @@ import org.jspecify.annotations.Nullable;
 import pl.aiwcorpo.mcp.gitlab.core.domain.Branch;
 import pl.aiwcorpo.mcp.gitlab.core.domain.CodeHit;
 import pl.aiwcorpo.mcp.gitlab.core.domain.Commit;
+import pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileDiff;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FoundMergeRequest;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
 import pl.aiwcorpo.mcp.gitlab.core.domain.Issue;
 import pl.aiwcorpo.mcp.gitlab.core.domain.IssueChange;
 import pl.aiwcorpo.mcp.gitlab.core.domain.IssueSummary;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Label;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequest;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequestChange;
 import pl.aiwcorpo.mcp.gitlab.core.domain.MergeRequestSummary;
@@ -23,8 +25,11 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.NoteView;
 import pl.aiwcorpo.mcp.gitlab.core.domain.Pipeline;
 import pl.aiwcorpo.mcp.gitlab.core.domain.PipelineJob;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectDetails;
+import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectMember;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Release;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectSummary;
 import pl.aiwcorpo.mcp.gitlab.core.domain.SystemText;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Tag;
 import pl.aiwcorpo.mcp.gitlab.core.domain.TreeEntry;
 import pl.aiwcorpo.mcp.platform.text.UntrustedText;
 
@@ -46,6 +51,12 @@ final class GitLabResponses {
     static final int SNIPPET_MAX_CHARS = 2_000;
     static final int TITLE_MAX_CHARS = 1_000;
     static final int NAME_MAX_CHARS = 255;
+    static final int RELEASE_DESCRIPTION_MAX_CHARS = 4_000;
+    static final int TAG_MESSAGE_MAX_CHARS = 1_000;
+    static final int LABEL_DESCRIPTION_MAX_CHARS = 1_000;
+    static final int RELEASE_LINKS_MAX = 50;
+
+    private static final Pattern COLOR = Pattern.compile("#[0-9A-Fa-f]{3,8}");
 
     /** A title that marks a draft in the versions that have no {@code draft} field. */
     private static final Pattern DRAFT_TITLE = Pattern.compile("(?i)^\\s*(?:\\[draft]|\\(draft\\)|draft:)");
@@ -234,6 +245,100 @@ final class GitLabResponses {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record BranchCommit(String id, String title, @JsonProperty("committed_date") String committedDate) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record TagResponse(String name, String message, @JsonProperty("protected") Boolean protectedTag, BranchCommit commit) {
+
+        Tag toDomain() {
+            UntrustedText tagName = plainName(name);
+            if (tagName == null) {
+                throw new BackendResponseException("field the server relies on is missing");
+            }
+            return new Tag(tagName, Boolean.TRUE.equals(protectedTag), SystemText.plain(message, TAG_MESSAGE_MAX_CHARS),
+                    commit == null ? null : commit.id(),
+                    commit == null ? null : SystemText.plain(commit.title(), TITLE_MAX_CHARS),
+                    commit == null ? null : commit.committedDate());
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ReleaseAssetLink(String name) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ReleaseAssets(List<ReleaseAssetLink> links) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ReleaseResponse(@JsonProperty("tag_name") String tagName, String name, String description,
+            @JsonProperty("released_at") String releasedAt, ReleaseAssets assets) {
+
+        Release toDomain() {
+            UntrustedText tag = plainName(tagName);
+            if (tag == null) {
+                throw new BackendResponseException("field the server relies on is missing");
+            }
+            List<UntrustedText> links = assets == null || assets.links() == null ? List.of()
+                    : assets.links().stream().filter(Objects::nonNull).map(link -> plainName(link.name()))
+                            .filter(Objects::nonNull).limit(RELEASE_LINKS_MAX).toList();
+            return new Release(tag, plainName(name), releasedAt,
+                    SystemText.markdown(description, RELEASE_DESCRIPTION_MAX_CHARS), links);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record MemberResponse(String username, String name, String state, @JsonProperty("access_level") Integer accessLevel) {
+
+        ProjectMember toDomain() {
+            UntrustedText user = plainName(username);
+            if (user == null || accessLevel == null) {
+                throw new BackendResponseException("field the server relies on is missing");
+            }
+            return new ProjectMember(user, plainName(name), accessLevel, roleOf(accessLevel), state);
+        }
+
+        /** The roles of GitLab's access levels; a level added later has a number and no name here. */
+        static @Nullable String roleOf(int level) {
+            return switch (level) {
+                case 5 -> "minimal_access";
+                case 10 -> "guest";
+                case 15 -> "planner";
+                case 20 -> "reporter";
+                case 30 -> "developer";
+                case 40 -> "maintainer";
+                case 50 -> "owner";
+                default -> null;
+            };
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record CurrentUserResponse(Long id, String username, String name, String state) {
+
+        CurrentUser toDomain() {
+            UntrustedText user = plainName(username);
+            if (id == null || user == null) {
+                throw new BackendResponseException("field the server relies on is missing");
+            }
+            return new CurrentUser(id, user, plainName(name), state);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record LabelResponse(String name, String color, String description,
+            @JsonProperty("open_issues_count") Long openIssuesCount,
+            @JsonProperty("open_merge_requests_count") Long openMergeRequestsCount) {
+
+        Label toDomain() {
+            UntrustedText labelName = plainName(name);
+            if (labelName == null) {
+                throw new BackendResponseException("field the server relies on is missing");
+            }
+            String checkedColor = color != null && COLOR.matcher(color).matches() ? color : null;
+            return new Label(labelName, checkedColor, SystemText.plain(description, LABEL_DESCRIPTION_MAX_CHARS),
+                    openIssuesCount, openMergeRequestsCount);
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

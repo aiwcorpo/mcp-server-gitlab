@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import pl.aiwcorpo.mcp.gitlab.core.domain.BackendRefusedException;
+import pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileMetadata;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileNotReturnedException;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FoundMergeRequest;
@@ -19,6 +21,7 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectPage;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectSummary;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ResourceNotFoundException;
 import pl.aiwcorpo.mcp.gitlab.core.port.out.GitLabPort;
+import pl.aiwcorpo.mcp.platform.text.UntrustedText;
 
 class GitLabServiceTest {
 
@@ -77,6 +80,40 @@ class GitLabServiceTest {
     }
 
     @Test
+    void anArtifactFileIsReadAsTextAndTheLimitAppliesToItsBytes() {
+        var file = service.getJobArtifactFile(APP, 5, "reports/ok.txt");
+
+        assertThat(file.project()).isEqualTo("team-a/app");
+        assertThat(file.size()).isEqualTo(5);
+        assertThat(file.content().text()).isEqualTo("hello");
+        assertThat(file.content().kind()).isEqualTo("untrusted-data");
+        assertThat(gitlab.artifactsRead).containsExactly("42/5/reports/ok.txt");
+        for (String path : new String[] {"reports/big.txt", "reports/unbounded.txt"}) {
+            assertThatThrownBy(() -> service.getJobArtifactFile(APP, 5, path))
+                    .isInstanceOf(FileNotReturnedException.class)
+                    .extracting(ex -> ((FileNotReturnedException) ex).reason())
+                    .isEqualTo(FileNotReturnedException.Reason.TOO_LARGE);
+        }
+    }
+
+    @Test
+    void binaryArtifactsAndMissingOnesAreNotReturned() {
+        assertThatThrownBy(() -> service.getJobArtifactFile(APP, 5, "reports/nul.bin"))
+                .isInstanceOf(FileNotReturnedException.class)
+                .extracting(ex -> ((FileNotReturnedException) ex).reason())
+                .isEqualTo(FileNotReturnedException.Reason.BINARY);
+        assertThatThrownBy(() -> service.getJobArtifactFile(APP, 5, "reports/none.txt"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void theCurrentUserIsWhatGitLabSaysAndAnAbsentOneIsNotFound() {
+        assertThat(service.currentUser().username().text()).isEqualTo("jkowalski");
+        gitlab.userVisible = false;
+        assertThatThrownBy(service::currentUser).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
     void anEmptyRepositoryHasNoDefaultFile() {
         assertThatThrownBy(() -> service.getFile(EMPTY, "README.md", null))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -92,6 +129,8 @@ class GitLabServiceTest {
     private static final class FakeGitLab implements GitLabPort {
 
         final List<String> contentReadAt = new ArrayList<>();
+        final List<String> artifactsRead = new ArrayList<>();
+        boolean userVisible = true;
 
         @Override
         public Optional<GitLabGroup> findGroup(String fullPath) {
@@ -132,6 +171,23 @@ class GitLabServiceTest {
                 case "latin1.txt" -> new byte[] {'z', (byte) 0xF3, 'b'};
                 default -> "hello".getBytes(StandardCharsets.UTF_8);
             });
+        }
+
+        @Override
+        public Optional<byte[]> jobArtifact(long projectId, long jobId, String artifactPath) {
+            artifactsRead.add(projectId + "/" + jobId + "/" + artifactPath);
+            return switch (artifactPath) {
+                case "reports/none.txt" -> Optional.empty();
+                case "reports/big.txt" -> Optional.of("x".repeat(17).getBytes(StandardCharsets.UTF_8));
+                case "reports/unbounded.txt" -> throw new BackendRefusedException(BackendRefusedException.Reason.RESPONSE_TOO_LARGE);
+                case "reports/nul.bin" -> Optional.of(new byte[] {'a', 0, 'b'});
+                default -> Optional.of("hello".getBytes(StandardCharsets.UTF_8));
+            };
+        }
+
+        @Override
+        public Optional<CurrentUser> currentUser() {
+            return userVisible ? Optional.of(new CurrentUser(6, UntrustedText.plain("jkowalski", 255), null, "active")) : Optional.empty();
         }
 
         @Override

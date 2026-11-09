@@ -138,6 +138,23 @@ public class GitLabHttp {
         }
     }
 
+    /** A file from the artifacts of a job: bytes under the response limit; a larger body is not read to its end. */
+    Optional<byte[]> getArtifact(GitLabQuery query) {
+        try {
+            return getBytes(query);
+        } catch (BackendResponseException unusable) {
+            if (unusable.tooLarge()) {
+                throw new BackendRefusedException(BackendRefusedException.Reason.RESPONSE_TOO_LARGE);
+            }
+            throw unusable;
+        } catch (ResourceAccessException failed) {
+            if (ResponseTooLargeException.causedBy(failed)) {
+                throw new BackendRefusedException(BackendRefusedException.Reason.RESPONSE_TOO_LARGE);
+            }
+            throw failed;
+        }
+    }
+
     /** HEAD as the user, for the headers only. */
     Optional<HttpHeaders> head(GitLabQuery query) {
         BackendCredential credential = credential();

@@ -8,7 +8,11 @@ import pl.aiwcorpo.mcp.gitlab.core.domain.CodeHit;
 import pl.aiwcorpo.mcp.gitlab.core.domain.Commit;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileDiff;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Label;
 import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectDetails;
+import pl.aiwcorpo.mcp.gitlab.core.domain.ProjectMember;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Release;
+import pl.aiwcorpo.mcp.gitlab.core.domain.Tag;
 import pl.aiwcorpo.mcp.gitlab.core.domain.TreeEntry;
 import pl.aiwcorpo.mcp.gitlab.core.port.in.RepositoryUseCase;
 import pl.aiwcorpo.mcp.platform.guard.RiskLevel;
@@ -112,6 +116,100 @@ public class RepositoryTools {
         String fingerprint = CursorCodec.fingerprint("list_branches", resolved.pathWithNamespace(), text);
         int page = cursors.pageOf(cursor, "list_branches", fingerprint);
         return cursors.result(repository.branches(resolved, text, page), "list_branches", fingerprint);
+    }
+
+    @Tool(name = "create_branch", description = "Creates a branch in a project as the calling user, from a branch, "
+            + "tag or commit. A branch that already exists is refused, so a repeated call changes nothing. Returns the "
+            + "new branch: name, whether it is protected, and its commit.")
+    @ToolRisk(RiskLevel.UPDATE)
+    @ToolTitle("Create branch")
+    public Branch createBranch(
+            @ToolParam(description = GitLabTools.PROJECT_PARAM)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
+            @ResourceRef(type = ResolvedResources.PROJECT) String project,
+            @ToolParam(description = "Name of the new branch, e.g. feature/retry")
+            @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String branch,
+            @ToolParam(description = "Branch, tag or commit SHA to create it from")
+            @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String ref) {
+        return repository.createBranch(ResolvedResources.project(GitLabArguments.project(project)),
+                GitLabArguments.branchName(branch), GitLabArguments.ref(ref));
+    }
+
+    @Tool(name = "list_tags", description = "Lists the tags of a project, most recently updated first, 50 per page: "
+            + "name, whether it is protected, the message of an annotated tag and its commit. Returns nextCursor when "
+            + "more tags exist.")
+    @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("List tags")
+    public PagedResult<Tag> listTags(
+            @ToolParam(description = GitLabTools.PROJECT_PARAM)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
+            @ResourceRef(type = ResolvedResources.PROJECT) String project,
+            @ToolParam(description = "Only tags whose name contains this text", required = false)
+            @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.REF_MAX_LENGTH) String search,
+            @ToolParam(description = GitLabTools.CURSOR_PARAM, required = false)
+            @ArgumentLimits(maxLength = CursorCodec.MAX_CURSOR_LENGTH, pattern = CursorCodec.ARGUMENT_PATTERN) String cursor) {
+        GitLabProject resolved = ResolvedResources.project(GitLabArguments.project(project));
+        String text = GitLabArguments.ref(search);
+        String fingerprint = CursorCodec.fingerprint("list_tags", resolved.pathWithNamespace(), text);
+        int page = cursors.pageOf(cursor, "list_tags", fingerprint);
+        return cursors.result(repository.tags(resolved, text, page), "list_tags", fingerprint);
+    }
+
+    @Tool(name = "list_releases", description = "Lists the releases of a project, newest first, 20 per page: tag, name, "
+            + "release time, the description (Markdown, cut at 4000 characters) and the names of the asset links, at "
+            + "most 50 (not their URLs). Returns truncated when a description was cut and nextCursor when more "
+            + "releases exist.")
+    @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("List releases")
+    public PagedResult<Release> listReleases(
+            @ToolParam(description = GitLabTools.PROJECT_PARAM)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
+            @ResourceRef(type = ResolvedResources.PROJECT) String project,
+            @ToolParam(description = GitLabTools.CURSOR_PARAM, required = false)
+            @ArgumentLimits(maxLength = CursorCodec.MAX_CURSOR_LENGTH, pattern = CursorCodec.ARGUMENT_PATTERN) String cursor) {
+        GitLabProject resolved = ResolvedResources.project(GitLabArguments.project(project));
+        String fingerprint = CursorCodec.fingerprint("list_releases", resolved.pathWithNamespace());
+        int page = cursors.pageOf(cursor, "list_releases", fingerprint);
+        return cursors.result(repository.releases(resolved, page), "list_releases", fingerprint,
+                release -> release.description() != null && release.description().truncated());
+    }
+
+    @Tool(name = "list_project_members", description = "Lists the members of a project, including those inherited from "
+            + "its groups, 100 per page: username, name, state, GitLab's access level number and its role name "
+            + "(guest, reporter, developer, maintainer, owner). E-mail addresses are not returned. Returns nextCursor "
+            + "when more members exist.")
+    @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("List project members")
+    public PagedResult<ProjectMember> listProjectMembers(
+            @ToolParam(description = GitLabTools.PROJECT_PARAM)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
+            @ResourceRef(type = ResolvedResources.PROJECT) String project,
+            @ToolParam(description = GitLabTools.CURSOR_PARAM, required = false)
+            @ArgumentLimits(maxLength = CursorCodec.MAX_CURSOR_LENGTH, pattern = CursorCodec.ARGUMENT_PATTERN) String cursor) {
+        GitLabProject resolved = ResolvedResources.project(GitLabArguments.project(project));
+        String fingerprint = CursorCodec.fingerprint("list_project_members", resolved.pathWithNamespace());
+        int page = cursors.pageOf(cursor, "list_project_members", fingerprint);
+        return cursors.result(repository.members(resolved, page), "list_project_members", fingerprint);
+    }
+
+    @Tool(name = "list_labels", description = "Lists the labels available in a project, its own and those of its groups, "
+            + "50 per page: name, color, description and the numbers of open issues and open merge requests. "
+            + "Optionally only labels whose name or description contains a text. Returns nextCursor when more labels exist.")
+    @ToolRisk(RiskLevel.READ_ONLY)
+    @ToolTitle("List labels")
+    public PagedResult<Label> listLabels(
+            @ToolParam(description = GitLabTools.PROJECT_PARAM)
+            @ArgumentLimits(resourceType = ResolvedResources.PROJECT, minLength = 3)
+            @ResourceRef(type = ResolvedResources.PROJECT) String project,
+            @ToolParam(description = "Only labels whose name or description contains this text", required = false)
+            @ArgumentLimits(minLength = 1, maxLength = GitLabArguments.SEARCH_MAX_LENGTH) String search,
+            @ToolParam(description = GitLabTools.CURSOR_PARAM, required = false)
+            @ArgumentLimits(maxLength = CursorCodec.MAX_CURSOR_LENGTH, pattern = CursorCodec.ARGUMENT_PATTERN) String cursor) {
+        GitLabProject resolved = ResolvedResources.project(GitLabArguments.project(project));
+        String text = GitLabArguments.filterText(search);
+        String fingerprint = CursorCodec.fingerprint("list_labels", resolved.pathWithNamespace(), text);
+        int page = cursors.pageOf(cursor, "list_labels", fingerprint);
+        return cursors.result(repository.labels(resolved, text, page), "list_labels", fingerprint);
     }
 
     @Tool(name = "list_commits", description = "Lists commits of a project, newest first, 50 per page: id, title, "

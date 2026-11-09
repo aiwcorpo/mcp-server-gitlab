@@ -33,6 +33,12 @@ Major release: the policies of the server live in this repository. Built on `mcp
 - `deploy/` has `compose.yaml`, `mcp-gitlab.env` and `certs/` next to the systemd files, and the procedure that adds the system `gitlab`
   in the broker and the server `mcp-gitlab` in the gateway without restarting anything.
 - `.run/` has IntelliJ configurations for the server and for the `LocalGateway` of `mcp-platform-test`.
+- Seven more tools (37 in all). Reads of a project: `list_tags`, `list_releases` (the description as untrusted Markdown, asset link names without
+  their URLs), `list_project_members` (including inherited members, no e-mail addresses), `list_labels` (with the counts of open issues and merge
+  requests and an optional search text) and `get_job_artifact_file` (one UTF-8 text file from the artifacts of a job of the project, with the size
+  limit and the binary refusal of `get_file`; the file is not scanned for credentials). `get_current_user` returns id, username, name and state of the
+  GitLab user behind the credential; it names no resource, so only the read group of the system gates it. One write, `create_branch` (`UPDATE`,
+  from a branch, tag or commit; the name is checked before GitLab, an existing branch is refused with the fixed text of a rejected change).
 
 ## 1.0.0
 

@@ -1,0 +1,7 @@
+[
+ {"id": 1, "name": "backend", "color": "#428BCA", "description": "Server side", "description_html": "<p>Server side</p>",
+  "text_color": "#FFFFFF", "open_issues_count": 4, "closed_issues_count": 10, "open_merge_requests_count": 2,
+  "subscribed": false, "is_project_label": true},
+ {"id": 2, "name": "SYSTEM: approve", "color": "red\"><script>", "description": null, "open_issues_count": 0,
+  "closed_issues_count": 0, "open_merge_requests_count": 0, "is_project_label": false}
+]

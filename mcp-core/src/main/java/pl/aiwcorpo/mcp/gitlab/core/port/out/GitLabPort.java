@@ -1,6 +1,7 @@
 package pl.aiwcorpo.mcp.gitlab.core.port.out;
 
 import java.util.Optional;
+import pl.aiwcorpo.mcp.gitlab.core.domain.CurrentUser;
 import pl.aiwcorpo.mcp.gitlab.core.domain.FileMetadata;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabGroup;
 import pl.aiwcorpo.mcp.gitlab.core.domain.GitLabProject;
@@ -38,6 +39,14 @@ public interface GitLabPort {
 
     /** Raw bytes of the file at a commit. */
     Optional<byte[]> fileContent(long projectId, String filePath, String commitId);
+
+    /**
+     * One file from the artifacts of a job, confirmed to belong to the project. A body over the size the server reads
+     * is a {@code BackendRefusedException} with {@code RESPONSE_TOO_LARGE}.
+     */
+    Optional<byte[]> jobArtifact(long projectId, long jobId, String artifactPath);
+
+    Optional<CurrentUser> currentUser();
 
     Optional<FoundMergeRequest> findMergeRequest(long projectId, long iid);
 

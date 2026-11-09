@@ -42,6 +42,8 @@ class OutOfReachTest extends ServerTestSupport {
             Map.entry("get_pipeline", Map.of("pipelineId", 100)),
             Map.entry("list_pipeline_jobs", Map.of("pipelineId", 100)),
             Map.entry("get_job_log", Map.of("jobId", 501)),
+            Map.entry("get_job_artifact_file", Map.of("jobId", 501, "artifactPath", "reports/junit.xml")),
+            Map.entry("create_branch", Map.of("branch", "feature/x", "ref", "main")),
             Map.entry("retry_pipeline", Map.of("pipelineId", 100)),
             Map.entry("cancel_pipeline", Map.of("pipelineId", 100)));
 
@@ -51,7 +53,7 @@ class OutOfReachTest extends ServerTestSupport {
     }
 
     static Stream<String> tools() {
-        return ToolCatalog.TOOLS.keySet().stream();
+        return ToolCatalog.TOOLS.keySet().stream().filter(tool -> ToolCatalog.TOOLS.get(tool).argument() != null);
     }
 
     @ParameterizedTest

@@ -120,6 +120,25 @@ final class GitLabArguments {
         return ref;
     }
 
+    /**
+     * The name of a branch to create: the rules of git-check-ref-format that GitLab applies, in the conservative
+     * character set of {@link #ref}. A name GitLab still refuses (a commit id, a protected pattern) comes back as its refusal.
+     */
+    static String branchName(String name) {
+        if (name == null || name.isEmpty() || name.length() > REF_MAX_LENGTH || !REF.matcher(name).matches()
+                || name.contains("..") || name.contains("//") || name.endsWith("/") || name.endsWith(".")
+                || name.endsWith(".lock") || name.equals("HEAD")) {
+            throw new InvalidToolArgumentException("branch must be a branch name of at most 255 characters: letters, "
+                    + "digits, '.', '_', '-' and '/', no spaces, not starting with '.', '-' or '/', without '..' or '//'");
+        }
+        return name;
+    }
+
+    /** A free text filter of a listing; {@code null} when none was given. */
+    static String filterText(String text) {
+        return text == null ? null : searchTerm(text);
+    }
+
     /** A directory of the repository; {@code null} or empty is the root. */
     static String treePath(String path) {
         return path == null || path.isEmpty() ? null : filePath(path);

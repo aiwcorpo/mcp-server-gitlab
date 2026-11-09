@@ -9,10 +9,12 @@ public class BackendRefusedException extends RuntimeException {
     public enum Reason {
         /** 409: the head commit moved, or an open merge request for the same branches exists. */
         CONFLICT,
-        /** 400, 405, 406, 422: not valid in the current state (draft, unresolved discussions, missing branch). */
+        /** 400, 405, 406, 422: not valid in the current state (draft, unresolved discussions, missing branch, a branch that already exists). */
         REJECTED,
         /** The job log is larger than the server reads. */
         LOG_TOO_LARGE,
+        /** GitLab's answer is larger than the server reads; the use case turns it into a refusal that names its own limit. */
+        RESPONSE_TOO_LARGE,
         /** A change was sent but GitLab's answer does not name this project, so the outcome is not known. */
         UNCONFIRMED
     }

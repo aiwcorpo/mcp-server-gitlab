@@ -27,13 +27,15 @@ the version from the first request that carries a user credential and refreshes 
 
 ## Tools
 
-30 tools: 20 `READ_ONLY` and 10 `UPDATE`; there is no `DESTRUCTIVE` tool. A client sees them as `gitlab__<name>`. Each accepts a
+37 tools: 26 `READ_ONLY` and 11 `UPDATE`; there is no `DESTRUCTIVE` tool. A client sees them as `gitlab__<name>`. Each accepts a
 personal access token (`user-secret`) or an OAuth token (`user-oauth`). The generated table with each tool's title, risk, action
 and required group is in `docs/reference/tools.md` of the `mcp-docs` repository (link below). It is not repeated here.
 
-Reads cover group projects, files, repository trees, code search, branches, commits and diffs, merge requests with their
-diffs and notes, issues and notes, pipelines, jobs and job logs. Writes cover merge request comments, creation, update, approval
-and merge, issue creation, update and comments, and pipeline retry and cancel. Merge and approval are `UPDATE`, so the write
+Reads cover group projects, files, repository trees, code search, branches, tags, releases, commits and diffs, merge requests with
+their diffs and notes, issues and notes, labels, project members, pipelines, jobs, job logs and single files from job artifacts, and
+the user behind the credential (`get_current_user`, the one tool that names no group or project: it needs only the read group).
+Writes cover merge request comments, creation, update, approval and merge, issue creation, update and comments, branch creation,
+and pipeline retry and cancel. Merge and approval are `UPDATE`, so the write
 group is enough and no confirmation code is asked.
 
 Token scopes: `read_api` for the read tools, `api` for the write tools (a read-only token used for a write gives

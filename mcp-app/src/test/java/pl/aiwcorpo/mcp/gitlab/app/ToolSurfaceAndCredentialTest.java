@@ -94,7 +94,8 @@ class ToolSurfaceAndCredentialTest extends ServerTestSupport {
 
             assertThat(json.valueToTree(byName(tools, "list_projects").inputSchema()).at("/properties/group/pattern").asString())
                     .isEqualTo(declared.get("GitLab::Group"));
-            for (String tool : ToolCatalog.TOOLS.keySet().stream().filter(name -> !name.equals("list_projects")).toList()) {
+            for (String tool : ToolCatalog.TOOLS.keySet().stream()
+                    .filter(name -> ToolCatalog.TOOLS.get(name).argument() != null && !name.equals("list_projects")).toList()) {
                 assertThat(json.valueToTree(byName(tools, tool).inputSchema()).at("/properties/project/pattern").asString())
                         .as(tool).isEqualTo(declared.get("GitLab::Project"));
             }
