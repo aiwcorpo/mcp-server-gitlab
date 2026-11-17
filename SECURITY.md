@@ -24,6 +24,11 @@ Out of scope:
 - GitLab itself, and the permissions of the account whose token the user connects.
 - Secrets in job logs that do not look like the documented patterns: redaction is a second line behind GitLab's masking.
 
+## GitLab versions
+
+Writes are not blocked when the GitLab version is unknown or outside the tested range 17.0 to 19.x (state `degraded`); a write on
+such a version is done without a guarantee. See "Supported GitLab versions" in [README.md](README.md).
+
 ## Supported versions
 
 Only the latest released version receives fixes. Published versions are immutable; a fix ships as a new release.
