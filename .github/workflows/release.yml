@@ -9,8 +9,8 @@
 #
 # Five jobs, each with the rights of its own work only: verify runs the tests with contents: read and hands over the jar and
 # the manifest; image builds the image with contents: read and hands it over as a tarball (docker save); publish has
-# packages: write, runs no build and no repository code (docker load, login, push) and holds the token only in the
-# environment of that step; sbom has contents: read and runs Maven; release has contents: write, runs no build tool and holds
+# packages: write and contents: read, runs no build and no repository code (docker load, login, a check that the version is
+# not published yet, push) and holds the token only in the environment of that step; sbom has contents: read and runs Maven; release has contents: write, runs no build tool and holds
 # the token only in the step that creates the GitHub Release.
 name: release
 
@@ -83,6 +83,8 @@ jobs:
     timeout-minutes: 15
     environment: release
     permissions:
+      # contents: read lets gh release view see a release of a private repository instead of answering "not found".
+      contents: read
       packages: write
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -92,10 +94,22 @@ jobs:
         run: |
           docker load -i image.tar
           echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker push "ghcr.io/aiwcorpo/mcp-server-gitlab:${GITHUB_REF_NAME#v}"
+          image="ghcr.io/aiwcorpo/mcp-server-gitlab:${GITHUB_REF_NAME#v}"
+          # A published version is immutable: a re-run or a moved tag must not replace the image operators already pull.
+          # Only a definite "not found" lets the push go ahead; any other error stops it.
+          if answer="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" 2>&1)"; then
+            echo "release $GITHUB_REF_NAME exists already" >&2; exit 1
+          fi
+          case "$answer" in *"release not found"*) ;; *) echo "$answer" >&2; exit 1 ;; esac
+          if answer="$(docker manifest inspect "$image" 2>&1)"; then
+            echo "$image exists already" >&2; exit 1
+          fi
+          case "$answer" in *"no such manifest"* | *"manifest unknown"*) ;; *) echo "$answer" >&2; exit 1 ;; esac
+          docker push "$image"
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   sbom:
     needs: verify
