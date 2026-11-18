@@ -61,6 +61,18 @@ that differs between versions is the draft filter of `list_merge_requests` (`dra
 `McpGitlab (dev, behind LocalGateway)` with `MCP_GITLAB_URL` set to your GitLab. Restart `LocalGateway` after a change to the
 policies: it approves the hash of the files it read.
 
+## Release
+
+A pushed tag `v<version>` runs `.github/workflows/release.yml`, which pushes the image to `ghcr.io/aiwcorpo/mcp-server-gitlab`
+and creates the GitHub Release from the tagged commit. The workflow cannot check who pushed the tag or whether the commit was
+reviewed, so the approval lives in the repository settings. Set them up before the first tag and check them after a change of
+maintainers:
+
+1. Settings > Environments: `release` with required reviewers, "Prevent self-review" on, and deployment branches and tags
+   limited to tags `v*`.
+2. Settings > Rules > Rulesets: a tag ruleset for `v*` that restricts creation, update and deletion to the release maintainers.
+3. Package settings of `mcp-server-gitlab` on ghcr.io: write access only for this repository and the release maintainers.
+
 ## Commits
 
 Subject in English, imperative, up to 72 characters. The body describes the change, not the process. Tests go in the
