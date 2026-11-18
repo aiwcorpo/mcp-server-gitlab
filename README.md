@@ -38,6 +38,12 @@ Strings that look like credentials in job logs and artifact files are replaced b
 
 GitLab CE and EE 17.0 to 19.x, REST API v4. Other versions work in the `degraded` state, without a guarantee.
 
+The state does not close writes. All 11 write tools, `merge_merge_request` and `approve_merge_request` included, also run while the
+version is not known yet (no request with a user credential since the start, or `/api/v4/version` refused) and on a version outside
+the tested range. Unlike the Jira server, there is no switch for this: GitLab ships a major version every May, and closing writes on
+an untested version would stop them on every upgraded instance until a new server release. Before connecting a GitLab outside 17.0 to
+19.x, try the write tools on a test project, and check the state in the log (`event=backend_version`) or in `/actuator/health`.
+
 ## Configuration
 
 Required, in `deploy/mcp-gitlab.env`:
