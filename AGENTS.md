@@ -3,7 +3,7 @@
 mcp-gitlab is the MCP server for self-managed GitLab in [MCP Platform](https://github.com/aiwcorpo/mcp-platform). Only the
 gateway calls it (internal JWT, policy data pushed to `POST /.well-known/mcp-policy-data`); it calls GitLab REST API v4
 with the caller's own token. Its interfaces follow `mcp-contracts` (`server-manifest.schema.json`,
-`internal-jwt.schema.json`, `tool-error.schema.json`, `openapi/mcp-server.v1.yaml`) through `mcp-platform-starter` 4.0.0
+`internal-jwt.schema.json`, `tool-error.schema.json`, `openapi/mcp-server.v1.yaml`) through `mcp-platform-starter` 4.1.0
 from `mcp-starter-lib`.
 
 ## Commands

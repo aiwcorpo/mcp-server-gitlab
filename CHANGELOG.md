@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.1 - 2026-11-19
+
+Maintenance release: built on `mcp-platform-starter` 4.1.0 and `mcp-contracts` 7.2.0, with newer security fixes for the libraries behind the server.
+No tool, policy or resource declaration of this repository changed since 2.0.0.
+
+- Library versions behind security fixes are overridden in the root `pom.xml` (Tomcat, Jackson, Spring Framework, Netty, Log4j, Guava).
+- The release workflow refuses to push an image whose version or GitHub Release already exists.
+- Merge-request pipelines use a read-only Maven cache.
+- The release settings (environment, tag ruleset, package access) are listed in `CONTRIBUTING.md`.
+- The README links to MCP Platform and its documentation and has a rewritten install guide; it says that writes run on an unknown or untested GitLab version.
+- `AGENTS.md` added for coding agents.
+
 ## 2.0.0
 
 Major release: the policies of the server live in this repository. Built on `mcp-platform-starter` 4.0.0 and `mcp-contracts` 7.0.0.
